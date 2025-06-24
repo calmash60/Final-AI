@@ -118,7 +118,7 @@
     <script>
     // ---- CONFIG ----
     const GEMINI_API_KEY   = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
-    const DEEPSEEK_API_KEY = 'YOUR_DEEPSEEK_API_KEY_HERE'; // <-- Replace with your DeepSeek API key
+    const DEEPSEEK_API_KEY = 'sk-745767d7f55d47d9a111319c36754e11';
 
     // ---- SYSTEM INSTRUCTION ----
     const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'DeepSeek', or 'Gemini' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
@@ -419,7 +419,7 @@
 
     // -- Calmash 1.0 (DeepSeek) --
     async function handleCalmash1Message(chat, userText) {
-        if (DEEPSEEK_API_KEY === 'sk-745767d7f55d47d9a111319c36754e11') {
+        if (DEEPSEEK_API_KEY === 'YOUR_DEEPSEEK_API_KEY_HERE') {
             appendMessage('bot', 'Please set your Calmash 1.0 (DeepSeek) API key in the source code!');
             return;
         }
@@ -577,4 +577,4 @@
     };
     </script>
 </body>
-    </html>
+</html>
