@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calmash AI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h2>Calmash AI</h2>
+
+      <div id="model-switcher-container">
+        <label for="model-select">Choose AI Model:</label>
+        <select id="model-select">
+          <option value="deepseek">Calmash 1.0 (DeepSeek)</option>
+          <option value="gemini">Calmash 1.0 Flash (Gemini 2.0 Flash)</option>
+        </select>
+      </div>
+
+      <button id="new-chat-btn">+ New Chat</button>
+
+      <div id="chat-list"></div>
+
+      <button id="dark-toggle">Toggle Dark Mode</button>
+    </aside>
+
+    <main id="main">
+      <div id="chat-header">
+        <div id="chat-title" contenteditable="true" spellcheck="false"></div>
+        <button id="delete-chat-btn" title="Delete Chat">🗑️</button>
+      </div>
+
+      <div id="chat-box"></div>
+
+      <div id="input-area">
+        <textarea id="prompt" rows="2" placeholder="Type your message..."></textarea>
+
+        <input type="file" id="file-upload" title="Upload file" />
+
+        <button id="send-btn">Send</button>
+      </div>
+    </main>
+  </div>
+
+  <template id="message-template">
+    <div class="message">
+      <div class="message-content"></div>
+      <div class="message-actions"></div>
+    </div>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
