@@ -70,6 +70,10 @@
                 </svg>
                 <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
             </div>
+            <select id="model-select" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1 focus:outline-none">
+                <option value="calmash1">Calmash 1.0</option>
+                <option value="calmash1flash">Calmash 1.0 Flash</option>
+            </select>
         </header>
 
         <!-- Messages Display Area -->
@@ -112,7 +116,14 @@
     </div>
 
     <script>
-    // MULTI-CHAT LOGIC
+    // ---- CONFIG ----
+    const GEMINI_API_KEY   = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
+    const DEEPSEEK_API_KEY = 'YOUR_DEEPSEEK_API_KEY_HERE'; // <-- Replace with your DeepSeek API key
+
+    // ---- SYSTEM INSTRUCTION ----
+    const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'DeepSeek', or 'Gemini' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
+
+    // ---- MULTI-CHAT LOGIC ----
     const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-v1';
     let chats = [];
     let activeChatId = null;
@@ -130,7 +141,8 @@
             id,
             name: name || 'New Chat',
             created: Date.now(),
-            history: []
+            history: [],
+            model: document.getElementById('model-select')?.value || 'calmash1'
         };
         chats.unshift(chat);
         activeChatId = id;
@@ -195,6 +207,12 @@
 
             btn.appendChild(span);
 
+            // Model tag
+            const tag = document.createElement('span');
+            tag.className = 'ml-2 text-xs px-2 py-0.5 rounded bg-white bg-opacity-30 text-white';
+            tag.textContent = chat.model === 'calmash1' ? 'Calmash 1.0' : 'Calmash 1.0 Flash';
+            btn.appendChild(tag);
+
             // Delete button
             const del = document.createElement('button');
             del.className = 'ml-2 text-white bg-transparent hover:bg-red-600 hover:text-white rounded-full p-1 transition';
@@ -215,6 +233,9 @@
             newChatSession('New Chat');
             chat = getActiveChat();
         }
+        // Update model selection dropdown
+        document.getElementById('model-select').value = chat.model || 'calmash1';
+
         if (chat.history.length === 0) {
             initialMessage = document.createElement('div');
             initialMessage.className = "text-center text-gray-500 mt-4";
@@ -224,17 +245,20 @@
         } else {
             for (const msg of chat.history) {
                 const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
-                if (msg.parts[0].text.includes('```')) {
+                if (msg.parts && msg.parts[0]?.text && msg.parts[0].text.includes('```')) {
                     const { prose, code, extension } = extractCodeAndProse(msg.parts[0].text);
                     appendMessageWithCode(senderForDisplay, prose, code, extension, false);
+                } else if (msg.content && msg.content.includes('```')) {
+                    const { prose, code, extension } = extractCodeAndProse(msg.content);
+                    appendMessageWithCode(senderForDisplay, prose, code, extension, false);
                 } else {
-                    appendMessage(senderForDisplay, msg.parts[0].text, false);
+                    appendMessage(senderForDisplay, msg.parts?.[0]?.text || msg.content, false);
                 }
             }
         }
     }
 
-    // SINGLE-CHAT LOGIC (adapted for multi-chat)
+    // ---- UI LOGIC ----
     const messagesContainer = document.getElementById('messages-container');
     const userInput = document.getElementById('user-input');
     const sendButton = document.getElementById('send-button');
@@ -242,24 +266,14 @@
     const fullScreenPreview = document.getElementById('full-screen-preview');
     const closePreviewButton = document.getElementById('close-preview');
     const previewIframe = document.getElementById('preview-iframe');
-
-    // Gemini API Key
-    const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
-
-    // Only origin/creator questions trigger the credit response
-    const SECRET_INSTRUCTION = "IMPORTANT: If the user asks 'who made you', 'who created you', 'who is your creator', 'who's your author', 'who developed you', or similar questions about your origin, respond ONLY with 'I was made by Calmash60, also known as Grady Hanson.' For all other questions (including those mentioning Google or Gemini), answer as usual.";
+    const modelSelect = document.getElementById('model-select');
 
     function saveChatHistory() {
         const chat = getActiveChat();
-        if (chat) {
-            saveChatsToStorage();
-        }
+        if (chat) saveChatsToStorage();
     }
     function appendMessage(sender, text, saveToHistory = true) {
-        if (initialMessage) {
-            initialMessage.remove();
-            initialMessage = null;
-        }
+        if (initialMessage) { initialMessage.remove(); initialMessage = null; }
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
         const contentDiv = document.createElement('div');
@@ -275,17 +289,19 @@
             const chat = getActiveChat();
             if (chat) {
                 const role = sender === 'user' ? 'user' : 'model';
-                chat.history.push({ role: role, parts: [{ text: text }] });
+                // Store in Calmash 1.0 or Calmash 1.0 Flash format
+                if (chat.model === 'calmash1') {
+                    chat.history.push({ role: role, content: text });
+                } else {
+                    chat.history.push({ role: role, parts: [{ text: text }] });
+                }
                 saveChatHistory();
             }
         }
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
     function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
-        if (initialMessage) {
-            initialMessage.remove();
-            initialMessage = null;
-        }
+        if (initialMessage) { initialMessage.remove(); initialMessage = null; }
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
         const contentWrapper = document.createElement('div');
@@ -327,7 +343,12 @@
             const chat = getActiveChat();
             if (chat) {
                 const role = sender === 'user' ? 'user' : 'model';
-                chat.history.push({ role: role, parts: [{ text: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' }] });
+                // Store in Calmash 1.0 or Calmash 1.0 Flash format
+                if (chat.model === 'calmash1') {
+                    chat.history.push({ role: role, content: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' });
+                } else {
+                    chat.history.push({ role: role, parts: [{ text: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' }] });
+                }
                 saveChatHistory();
             }
         }
@@ -366,6 +387,8 @@
         }
         return { prose, code, extension };
     }
+
+    // ---- MAIN SEND LOGIC ----
     async function sendMessage() {
         const userText = userInput.value.trim();
         if (userText === '') return;
@@ -374,38 +397,14 @@
         showTypingIndicator(true);
         sendButton.disabled = true;
         userInput.disabled = true;
+
         try {
             const chat = getActiveChat();
-            const payload = {
-                contents: [
-                    ...(chat ? chat.history : []),
-                    { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
-                ]
-            };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
-            }
-            const result = await response.json();
-            let geminiRawResponse = 'I apologize, I could not generate a response at this time.';
-            if (result.candidates && result.candidates.length > 0 &&
-                result.candidates[0].content && result.candidates[0].content.parts &&
-                result.candidates[0].content.parts.length > 0) {
-                geminiRawResponse = result.candidates[0].content.parts[0].text;
-                const { prose, code, extension } = extractCodeAndProse(geminiRawResponse);
-                if (code) {
-                    appendMessageWithCode('bot', prose, code, extension);
-                } else {
-                    appendMessage('bot', prose);
-                }
+            if (!chat) { showTypingIndicator(false); return; }
+            if (chat.model === 'calmash1') {
+                await handleCalmash1Message(chat, userText);
             } else {
-                appendMessage('bot', geminiRawResponse);
+                await handleCalmash1FlashMessage(chat, userText);
             }
         } catch (error) {
             appendMessage('bot', 'I am currently unable to connect to the AI. Please try again later.');
@@ -417,6 +416,100 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
+
+    // -- Calmash 1.0 (DeepSeek) --
+    async function handleCalmash1Message(chat, userText) {
+        if (DEEPSEEK_API_KEY === 'sk-745767d7f55d47d9a111319c36754e11') {
+            appendMessage('bot', 'Please set your Calmash 1.0 (DeepSeek) API key in the source code!');
+            return;
+        }
+        // Build messages
+        const messages = [
+            { role: "system", content: SECRET_INSTRUCTION },
+            ...(chat.history ?? []),
+            { role: "user", content: userText }
+        ];
+        // Clean format
+        const cleanMessages = messages.map(m => {
+            if (m.parts && m.parts[0]) return { role: m.role, content: m.parts[0].text };
+            return { role: m.role, content: m.content || m.text };
+        });
+        const payload = {
+            model: "deepseek-chat",
+            messages: cleanMessages
+        };
+        const apiUrl = "https://api.deepseek.com/v1/chat/completions";
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + DEEPSEEK_API_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Calmash 1.0 API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+        const result = await response.json();
+        let reply = result.choices?.[0]?.message?.content || 'I apologize, I could not generate a response at this time.';
+        const { prose, code, extension } = extractCodeAndProse(reply);
+        if (code) {
+            appendMessageWithCode('bot', prose, code, extension);
+        } else {
+            appendMessage('bot', prose);
+        }
+    }
+
+    // -- Calmash 1.0 Flash (Gemini) --
+    async function handleCalmash1FlashMessage(chat, userText) {
+        const payload = {
+            contents: [
+                ...(chat.history ?? []),
+                { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
+            ]
+        };
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Calmash 1.0 Flash API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
+        }
+        const result = await response.json();
+        let reply = 'I apologize, I could not generate a response at this time.';
+        if (result.candidates && result.candidates.length > 0 &&
+            result.candidates[0].content && result.candidates[0].content.parts &&
+            result.candidates[0].content.parts.length > 0) {
+            reply = result.candidates[0].content.parts[0].text;
+            const { prose, code, extension } = extractCodeAndProse(reply);
+            if (code) {
+                appendMessageWithCode('bot', prose, code, extension);
+            } else {
+                appendMessage('bot', prose);
+            }
+        } else {
+            appendMessage('bot', reply);
+        }
+    }
+
+    // -- MODEL SELECTION HANDLING --
+    modelSelect.addEventListener('change', () => {
+        const chat = getActiveChat();
+        if (chat) {
+            chat.model = modelSelect.value;
+            saveChatHistory();
+            loadActiveChatToUI();
+        }
+    });
+    document.getElementById('new-chat-btn').addEventListener('click', () => {
+        newChatSession('New Chat');
+    });
+
+    // -- CODE PREVIEW / CLIPBOARD LOGIC --
     function openFullScreenPreview(code, extension) {
         if (!code) { alert('No code to preview!'); return; }
         let srcdocContent = '';
@@ -470,9 +563,6 @@
     fullScreenPreview.addEventListener('click', (event) => {
         if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
     });
-    document.getElementById('new-chat-btn').addEventListener('click', () => {
-        newChatSession('New Chat');
-    });
     window.onload = () => {
         loadChatsFromStorage();
         if (chats.length === 0) newChatSession('New Chat');
@@ -487,4 +577,4 @@
     };
     </script>
 </body>
-</html>
+    </html>
