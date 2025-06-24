@@ -12,41 +12,16 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
         body { font-family: 'Inter', sans-serif; }
-        .code-preview-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000; flex-direction: column; padding: 20px; box-sizing: border-box;
-        }
-        .code-preview-content {
-            background-color: white; border-radius: 15px; width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden;
-        }
+        .code-preview-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .code-preview-content { background-color: white; border-radius: 15px; width: 100%; height: 100%; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; }
         .preview-iframe { flex-grow: 1; border: none; width: 100%; height: 100%; background-color: white; }
-        .close-preview-button {
-            position: absolute; top: 10px; right: 20px; background: none; border: none;
-            font-size: 40px; color: white; cursor: pointer; z-index: 1001; line-height: 1;
-            text-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
-        .code-block-container {
-            background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 8px; padding: 10px;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-            font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;
-            max-height: 200px; overflow-y: auto; margin-top: 5px; margin-bottom: 5px;
-        }
-        .chat-sidebar {
-            min-width: 220px;
-            max-width: 280px;
-            background: linear-gradient(to bottom, #6366f1 0%, #818cf8 100%);
-        }
-        .sidebar-chat-btn.active, .sidebar-chat-btn:hover {
-            background: rgba(255,255,255,0.12);
-        }
-        @media (max-width: 800px) {
-            .chat-sidebar { position: absolute; left: 0; z-index: 100; }
-            .chat-main { margin-left: 0 !important; }
-        }
+        .close-preview-button { position: absolute; top: 10px; right: 20px; background: none; border: none; font-size: 40px; color: white; cursor: pointer; z-index: 1001; line-height: 1; text-shadow: 0 0 5px rgba(0,0,0,0.5);}
+        .code-block-container { background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; margin-top: 5px; margin-bottom: 5px;}
+        .chat-sidebar { min-width: 220px; max-width: 280px; background: linear-gradient(to bottom, #6366f1 0%, #818cf8 100%);}
+        .sidebar-chat-btn.active, .sidebar-chat-btn:hover { background: rgba(255,255,255,0.12);}
+        .fixed-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(60,60,100,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .modal-card { background: white; border-radius: 1.2rem; padding: 2rem 2.4rem 2rem 2.4rem; box-shadow: 0 6px 32px rgba(30,30,60,.13); min-width: 300px; max-width: 95vw;}
+        @media (max-width: 800px) { .chat-sidebar { position: absolute; left: 0; z-index: 100; } .chat-main { margin-left: 0 !important; } }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-start justify-center p-0 font-inter">
@@ -60,7 +35,6 @@
 
     <!-- Main chat area -->
     <div class="chat-main bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[80vh] m-6 ml-[290px] relative">
-        <!-- Chat Header / Menu -->
         <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-md relative">
             <div class="flex items-center space-x-3">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2"
@@ -70,10 +44,9 @@
                 </svg>
                 <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
             </div>
-            <select id="model-select" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1 focus:outline-none">
-                <option value="calmash1">Calmash 1.0</option>
-                <option value="calmash1flash">Calmash 1.0 Flash</option>
-            </select>
+            <span id="model-badge" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1">
+                Calmash 1.0
+            </span>
         </header>
 
         <!-- Messages Display Area -->
@@ -107,6 +80,28 @@
         </div>
     </div>
 
+    <!-- New Chat Modal -->
+    <div id="new-chat-modal" class="fixed-modal-bg" style="display:none;">
+        <div class="modal-card">
+            <h2 class="font-bold text-xl mb-4 text-indigo-800">Start a New Chat</h2>
+            <label class="block mb-3 font-semibold text-indigo-900">
+                Chat Name:
+                <input id="modal-chat-name" type="text" class="mt-1 block w-full border border-gray-300 rounded p-2" placeholder="New Chat" />
+            </label>
+            <label class="block mb-4 font-semibold text-indigo-900">
+                Select Model:
+                <select id="modal-model-select" class="mt-1 block w-full border border-gray-300 rounded p-2">
+                    <option value="calmash1">Calmash 1.0</option>
+                    <option value="calmash1flash">Calmash 1.0 Flash</option>
+                </select>
+            </label>
+            <div class="flex justify-end space-x-2">
+                <button id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
+                <button id="modal-create" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Create</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Full-screen Code Preview Overlay -->
     <div id="full-screen-preview" class="code-preview-overlay hidden">
         <button id="close-preview" class="close-preview-button">&times;</button>
@@ -116,15 +111,12 @@
     </div>
 
     <script>
-    // ---- CONFIG ----
     const GEMINI_API_KEY   = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
     const DEEPSEEK_API_KEY = 'sk-745767d7f55d47d9a111319c36754e11';
 
-    // ---- SYSTEM INSTRUCTION ----
     const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'DeepSeek', or 'Gemini' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
 
-    // ---- MULTI-CHAT LOGIC ----
-    const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-v1';
+    const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-v2';
     let chats = [];
     let activeChatId = null;
 
@@ -135,14 +127,14 @@
     function saveChatsToStorage() {
         localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
     }
-    function newChatSession(name) {
+    function newChatSession(name, model) {
         const id = 'chat_' + Date.now();
         const chat = {
             id,
             name: name || 'New Chat',
             created: Date.now(),
             history: [],
-            model: document.getElementById('model-select')?.value || 'calmash1'
+            model: model || 'calmash1'
         };
         chats.unshift(chat);
         activeChatId = id;
@@ -167,7 +159,7 @@
     function removeChat(chatId) {
         chats = chats.filter(c => c.id !== chatId);
         if (chats.length === 0) {
-            newChatSession('New Chat');
+            newChatSession('New Chat', 'calmash1');
         } else if (activeChatId === chatId) {
             activeChatId = chats[0].id;
         }
@@ -230,11 +222,11 @@
         messagesContainer.innerHTML = '';
         let chat = getActiveChat();
         if (!chat) {
-            newChatSession('New Chat');
+            newChatSession('New Chat', 'calmash1');
             chat = getActiveChat();
         }
-        // Update model selection dropdown
-        document.getElementById('model-select').value = chat.model || 'calmash1';
+        // Update model badge
+        document.getElementById('model-badge').textContent = chat.model === 'calmash1' ? 'Calmash 1.0' : 'Calmash 1.0 Flash';
 
         if (chat.history.length === 0) {
             initialMessage = document.createElement('div');
@@ -266,7 +258,7 @@
     const fullScreenPreview = document.getElementById('full-screen-preview');
     const closePreviewButton = document.getElementById('close-preview');
     const previewIframe = document.getElementById('preview-iframe');
-    const modelSelect = document.getElementById('model-select');
+    const modelBadge = document.getElementById('model-badge');
 
     function saveChatHistory() {
         const chat = getActiveChat();
@@ -289,7 +281,6 @@
             const chat = getActiveChat();
             if (chat) {
                 const role = sender === 'user' ? 'user' : 'model';
-                // Store in Calmash 1.0 or Calmash 1.0 Flash format
                 if (chat.model === 'calmash1') {
                     chat.history.push({ role: role, content: text });
                 } else {
@@ -343,7 +334,6 @@
             const chat = getActiveChat();
             if (chat) {
                 const role = sender === 'user' ? 'user' : 'model';
-                // Store in Calmash 1.0 or Calmash 1.0 Flash format
                 if (chat.model === 'calmash1') {
                     chat.history.push({ role: role, content: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' });
                 } else {
@@ -388,7 +378,6 @@
         return { prose, code, extension };
     }
 
-    // ---- MAIN SEND LOGIC ----
     async function sendMessage() {
         const userText = userInput.value.trim();
         if (userText === '') return;
@@ -419,17 +408,15 @@
 
     // -- Calmash 1.0 (DeepSeek) --
     async function handleCalmash1Message(chat, userText) {
-        if (DEEPSEEK_API_KEY === 'YOUR_DEEPSEEK_API_KEY_HERE') {
+        if (!DEEPSEEK_API_KEY || DEEPSEEK_API_KEY.length < 10) {
             appendMessage('bot', 'Please set your Calmash 1.0 (DeepSeek) API key in the source code!');
             return;
         }
-        // Build messages
         const messages = [
             { role: "system", content: SECRET_INSTRUCTION },
             ...(chat.history ?? []),
             { role: "user", content: userText }
         ];
-        // Clean format
         const cleanMessages = messages.map(m => {
             if (m.parts && m.parts[0]) return { role: m.role, content: m.parts[0].text };
             return { role: m.role, content: m.content || m.text };
@@ -448,8 +435,9 @@
             body: JSON.stringify(payload)
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Calmash 1.0 API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+            let errorData = {};
+            try { errorData = await response.json(); } catch (e) {}
+            throw new Error(`Calmash 1.0 API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
         }
         const result = await response.json();
         let reply = result.choices?.[0]?.message?.content || 'I apologize, I could not generate a response at this time.';
@@ -476,8 +464,9 @@
             body: JSON.stringify(payload)
         });
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Calmash 1.0 Flash API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
+            let errorData = {};
+            try { errorData = await response.json(); } catch (e) {}
+            throw new Error(`Calmash 1.0 Flash API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
         }
         const result = await response.json();
         let reply = 'I apologize, I could not generate a response at this time.';
@@ -496,17 +485,33 @@
         }
     }
 
-    // -- MODEL SELECTION HANDLING --
-    modelSelect.addEventListener('change', () => {
-        const chat = getActiveChat();
-        if (chat) {
-            chat.model = modelSelect.value;
-            saveChatHistory();
-            loadActiveChatToUI();
-        }
+    // -- NEW CHAT MODAL LOGIC --
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const newChatModal = document.getElementById('new-chat-modal');
+    const modalChatName = document.getElementById('modal-chat-name');
+    const modalModelSelect = document.getElementById('modal-model-select');
+    const modalCancel = document.getElementById('modal-cancel');
+    const modalCreate = document.getElementById('modal-create');
+    function showNewChatModal() {
+        modalChatName.value = '';
+        modalModelSelect.value = 'calmash1';
+        newChatModal.style.display = 'flex';
+        setTimeout(() => modalChatName.focus(), 120);
+    }
+    function hideNewChatModal() {
+        newChatModal.style.display = 'none';
+    }
+    newChatBtn.addEventListener('click', showNewChatModal);
+    modalCancel.addEventListener('click', hideNewChatModal);
+    modalCreate.addEventListener('click', () => {
+        newChatSession(modalChatName.value.trim() || 'New Chat', modalModelSelect.value);
+        hideNewChatModal();
     });
-    document.getElementById('new-chat-btn').addEventListener('click', () => {
-        newChatSession('New Chat');
+    modalChatName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') modalCreate.click();
+    });
+    newChatModal.addEventListener('click', (e) => {
+        if (e.target === newChatModal) hideNewChatModal();
     });
 
     // -- CODE PREVIEW / CLIPBOARD LOGIC --
@@ -565,7 +570,7 @@
     });
     window.onload = () => {
         loadChatsFromStorage();
-        if (chats.length === 0) newChatSession('New Chat');
+        if (chats.length === 0) newChatSession('New Chat', 'calmash1');
         else {
             if (!activeChatId || !chats.find(c => c.id === activeChatId)) {
                 activeChatId = chats[0].id;
