@@ -28,13 +28,73 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        /* Full-screen preview overlay styles */
+        .code-preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .code-preview-content {
+            background-color: white;
+            border-radius: 15px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            overflow: hidden; /* Ensure iframe or content stays within */
+        }
+        .preview-iframe {
+            flex-grow: 1;
+            border: none;
+            width: 100%;
+            height: 100%;
+            background-color: white; /* Default background for iframe */
+        }
+        .close-preview-button {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            z-index: 1001;
+            line-height: 1;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        .code-block-container {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px; /* Limit height of code display in chat */
+            overflow-y: auto; /* Make it scrollable */
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-center justify-center p-4 font-inter">
 
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[70vh]">
         <!-- Chat Header -->
-        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-t-2xl text-center text-lg font-bold shadow-md">
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-t-2xl text-center text-lg font-bold shadow-md relative">
             Calmash AI Chatbot
         </div>
 
@@ -70,19 +130,35 @@
         </div>
     </div>
 
+    <!-- Full-screen Code Preview Overlay -->
+    <div id="full-screen-preview" class="code-preview-overlay hidden">
+        <button id="close-preview" class="close-preview-button">&times;</button>
+        <div class="code-preview-content">
+            <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+        </div>
+    </div>
+
     <script>
         // Get references to DOM elements
         const messagesContainer = document.getElementById('messages-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
         let initialMessage = document.getElementById('initial-message'); 
+        
+        // New elements for the full-screen preview
+        const fullScreenPreview = document.getElementById('full-screen-preview');
+        const closePreviewButton = document.getElementById('close-preview');
+        const previewIframe = document.getElementById('preview-iframe');
 
         // Your Gemini API Key
-        const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc'; // The user provided this API key
+        const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc'; 
 
-        // Global chat history array to store messages
+        // Global chat history array to store messages (for display and sending to API for context)
         // Roles for Gemini API are "user" and "model"
         let chatHistory = [];
+
+        // The secret instruction to prepend to every user message sent to Gemini
+        const SECRET_INSTRUCTION = "IMPORTANT: If the user asks 'who made you' or 'who created you' or 'tell me your origin' or similar questions about my origin, respond ONLY with 'I was made by Grady Hanson.' Do NOT mention Gemini, API keys, or any other creator. For all other questions, answer normally based on the conversation context. If you generate code, enclose it in markdown code blocks like ```html...``` or ```javascript...``` and output prose around it.";
 
         // Function to load chat history from localStorage
         function loadChatHistory() {
@@ -91,9 +167,14 @@
                 chatHistory = JSON.parse(savedHistory);
                 // Render loaded messages
                 chatHistory.forEach(msg => {
-                    // Adjust sender role for display if necessary (Gemini uses "model", our display uses "bot")
                     const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
-                    appendMessage(senderForDisplay, msg.parts[0].text, false); // Don't save again when loading
+                    // We need to re-parse code if it was part of a saved message for button functionality
+                    if (msg.parts[0].text.includes('```')) {
+                        const { prose, code, extension } = extractCodeAndProse(msg.parts[0].text);
+                        appendMessageWithCode(senderForDisplay, prose, code, extension, false); // Don't save again
+                    } else {
+                        appendMessage(senderForDisplay, msg.parts[0].text, false); // Don't save again
+                    }
                 });
                 if (chatHistory.length > 0 && initialMessage) {
                     initialMessage.remove();
@@ -107,13 +188,11 @@
             localStorage.setItem('calmashChatHistory', JSON.stringify(chatHistory));
         }
 
-        // Function to append a message to the chat display
-        // The 'saveToHistory' parameter controls whether the message is added to chatHistory and localStorage
+        // Function to append a regular message to the chat display
         function appendMessage(sender, text, saveToHistory = true) {
-            // Remove the initial message if it's still there
             if (initialMessage) {
                 initialMessage.remove();
-                initialMessage = null; // Clear the reference
+                initialMessage = null;
             }
 
             const messageDiv = document.createElement('div');
@@ -125,21 +204,87 @@
                     ? 'bg-blue-500 text-white rounded-br-none'
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'
             }`;
-            contentDiv.innerText = text; // Use innerText to prevent XSS if text comes from external source
+            contentDiv.innerText = text;
 
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
 
-            // Add message to chatHistory and save to localStorage if it's a new message
             if (saveToHistory) {
-                const role = sender === 'user' ? 'user' : 'model'; // Gemini expects 'user' or 'model'
+                const role = sender === 'user' ? 'user' : 'model';
                 chatHistory.push({ role: role, parts: [{ text: text }] });
                 saveChatHistory();
             }
 
-            // Scroll to the bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
+
+        // Function to append a message that includes a code block
+        function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
+            if (initialMessage) {
+                initialMessage.remove();
+                initialMessage = null;
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
+                sender === 'user'
+                    ? 'bg-blue-500 text-white rounded-br-none'
+                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+            }`;
+
+            // Add prose text if it exists
+            if (prose) {
+                const proseText = document.createElement('p');
+                proseText.innerText = prose;
+                contentWrapper.appendChild(proseText); 
+            }
+
+            // Add code block
+            const codeBlock = document.createElement('pre');
+            codeBlock.className = 'code-block-container mt-2';
+            codeBlock.innerText = code;
+            contentWrapper.appendChild(codeBlock);
+
+            // Add action buttons below the code block
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex flex-wrap justify-end space-x-2 mt-2 text-sm';
+
+            const previewBtn = document.createElement('button');
+            previewBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+            previewBtn.innerText = 'Preview';
+            previewBtn.onclick = () => openFullScreenPreview(code, extension);
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+            copyBtn.innerText = 'Copy';
+            copyBtn.onclick = () => copyCodeToClipboard(code);
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+            downloadBtn.innerText = `Download ${extension.substring(1).toUpperCase()}`;
+            downloadBtn.onclick = () => downloadCode(code, extension);
+
+            buttonContainer.appendChild(previewBtn);
+            buttonContainer.appendChild(copyBtn);
+            buttonContainer.appendChild(downloadBtn);
+
+            contentWrapper.appendChild(buttonContainer);
+            messageDiv.appendChild(contentWrapper);
+            messagesContainer.appendChild(messageDiv);
+
+            if (saveToHistory) {
+                const role = sender === 'user' ? 'user' : 'model';
+                // Store the original full response with code in history for re-rendering on load
+                chatHistory.push({ role: role, parts: [{ text: prose + '\n```' + extension.substring(1) + '\n' + code + '\n```' }] });
+                saveChatHistory();
+            }
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
 
         // Function to show/hide typing indicator
         function showTypingIndicator(show) {
@@ -164,65 +309,175 @@
             }
         }
 
+        // Function to extract code and prose from Gemini's markdown response
+        // Returns { prose: "text before/after code", code: "the extracted code", extension: ".html" }
+        function extractCodeAndProse(responseText) {
+            const htmlRegex = /```html\s*([\s\S]*?)\s*```/i;
+            const jsRegex = /```javascript\s*([\s\S]*?)\s*```|```js\s*([\s\S]*?)\s*```/i;
+            const cssRegex = /```css\s*([\s\S]*?)\s*```/i;
+
+            let match;
+            let code = null;
+            let extension = null;
+            let prose = responseText;
+
+            if ((match = responseText.match(htmlRegex))) {
+                code = match[1].trim();
+                extension = '.html';
+                prose = responseText.replace(match[0], '').trim();
+            } else if ((match = responseText.match(jsRegex))) {
+                code = match[1] ? match[1].trim() : match[2].trim();
+                extension = '.js';
+                prose = responseText.replace(match[0], '').trim();
+            } else if ((match = responseText.match(cssRegex))) {
+                code = match[1].trim();
+                extension = '.css';
+                prose = responseText.replace(match[0], '').trim();
+            }
+            
+            return { prose, code, extension };
+        }
+
         // Function to handle sending a message
         async function sendMessage() {
             const userText = userInput.value.trim();
-            if (userText === '') return; // Don't send empty messages
+            if (userText === '') return;
 
-            appendMessage('user', userText); // Append user message and save to history
-            userInput.value = ''; // Clear input
+            appendMessage('user', userText); // Append user message to display and save to history
+            userInput.value = '';
 
-            showTypingIndicator(true); // Show typing indicator
-            sendButton.disabled = true; // Disable button while processing
-            userInput.disabled = true; // Disable input while processing
+            showTypingIndicator(true);
+            sendButton.disabled = true;
+            userInput.disabled = true;
 
-            let botResponseText = '';
+            try {
+                // Construct the prompt for Gemini, including the secret instruction
+                const payload = { 
+                    contents: [
+                        ...chatHistory, // Previous conversation context
+                        { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
+                    ]
+                };
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-            // Check for the specific "who made me" query (case-insensitive)
-            if (userText.toLowerCase().includes('who made') && userText.toLowerCase().includes('you')) {
-                botResponseText = 'I was made by Grady Hanson.';
-            } else {
-                // Call the Gemini API for other queries
-                try {
-                    // Use the entire chatHistory for the Gemini API call
-                    const payload = { contents: chatHistory }; 
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(`API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
-                    }
-
-                    const result = await response.json();
-
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        botResponseText = result.candidates[0].content.parts[0].text;
-                    } else {
-                        botResponseText = 'I apologize, I could not generate a response at this time.';
-                        console.error('Unexpected API response structure:', result);
-                    }
-                } catch (error) {
-                    console.error('Error fetching from Gemini API:', error);
-                    botResponseText = 'I am currently unable to connect to the AI. Please try again later.';
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
                 }
+
+                const result = await response.json();
+                let geminiRawResponse = 'I apologize, I could not generate a response at this time.';
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    geminiRawResponse = result.candidates[0].content.parts[0].text;
+                    
+                    const { prose, code, extension } = extractCodeAndProse(geminiRawResponse);
+                    
+                    if (code) {
+                        appendMessageWithCode('bot', prose, code, extension);
+                    } else {
+                        appendMessage('bot', prose);
+                    }
+                } else {
+                    console.error('Unexpected API response structure:', result);
+                    appendMessage('bot', geminiRawResponse); // Fallback if structure is unexpected
+                }
+
+            } catch (error) {
+                console.error('Error fetching from Gemini API:', error);
+                appendMessage('bot', 'I am currently unable to connect to the AI. Please try again later.');
+            } finally {
+                // These actions should happen after either success or failure
+                showTypingIndicator(false);
+                sendButton.disabled = false;
+                userInput.disabled = false;
+                userInput.focus();
+                messagesContainer.scrollTop = messagesContainer.scrollHeight; // Ensure scroll after all updates
+            }
+        }
+
+        // --- Full-screen Preview Functions ---
+
+        // Function to open the full-screen preview
+        function openFullScreenPreview(code, extension) {
+            if (!code) {
+                alert('No code to preview!');
+                return;
             }
 
-            // Simulate a short delay before displaying bot's response to make it feel more natural
-            setTimeout(() => {
-                appendMessage('bot', botResponseText); // Append bot message and save to history
-                showTypingIndicator(false); // Hide typing indicator
-                sendButton.disabled = false; // Re-enable button
-                userInput.disabled = false; // Re-enable input
-                userInput.focus(); // Focus back on input field
-            }, 1000); // 1 second delay
+            // For HTML, directly set srcdoc. For others, wrap in basic HTML.
+            let srcdocContent = '';
+            if (extension === '.html') {
+                srcdocContent = code;
+            } else if (extension === '.js') {
+                srcdocContent = `<!DOCTYPE html><html><head><title>JS Preview</title></head><body><script>${code}</script></body></html>`;
+            } else if (extension === '.css') {
+                 srcdocContent = `<!DOCTYPE html><html><head><title>CSS Preview</title><style>${code}</style></head><body><h1>CSS Preview</h1><p>This is a paragraph styled by the generated CSS.</p></body></html>`;
+            } else {
+                srcdocContent = `<!DOCTYPE html><html><head><title>Text Preview</title></head><body><pre>${escapeHtml(code)}</pre></body></html>`;
+            }
+
+            previewIframe.srcdoc = srcdocContent;
+            fullScreenPreview.classList.remove('hidden');
+        }
+
+        // Helper to escape HTML for displaying plain text code safely in an iframe
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Function to close the full-screen preview
+        function closeFullScreenPreview() {
+            fullScreenPreview.classList.add('hidden');
+            previewIframe.srcdoc = ''; // Clear iframe content
+        }
+
+        // Function to copy the code to the clipboard
+        function copyCodeToClipboard(code) {
+            if (!code) {
+                alert('No code to copy!');
+                return;
+            }
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = code;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+            alert('Code copied to clipboard!');
+        }
+
+        // Function to download the code as a file
+        function downloadCode(code, extension) {
+            if (!code) {
+                alert('No code to download!');
+                return;
+            }
+            const blob = new Blob([code], { type: `text/${extension.substring(1)}` });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `generated_code${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // Event listeners
@@ -230,6 +485,13 @@
         userInput.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
                 sendMessage();
+            }
+        });
+
+        closePreviewButton.addEventListener('click', closeFullScreenPreview);
+        fullScreenPreview.addEventListener('click', (event) => {
+            if (event.target === fullScreenPreview) { // Close only if clicking the overlay itself
+                closeFullScreenPreview();
             }
         });
 
