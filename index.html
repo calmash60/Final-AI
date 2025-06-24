@@ -75,14 +75,41 @@
         const messagesContainer = document.getElementById('messages-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
-        // Changed from 'const' to 'let' to allow reassignment
         let initialMessage = document.getElementById('initial-message'); 
 
         // Your Gemini API Key
         const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc'; // The user provided this API key
 
+        // Global chat history array to store messages
+        // Roles for Gemini API are "user" and "model"
+        let chatHistory = [];
+
+        // Function to load chat history from localStorage
+        function loadChatHistory() {
+            const savedHistory = localStorage.getItem('calmashChatHistory');
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                // Render loaded messages
+                chatHistory.forEach(msg => {
+                    // Adjust sender role for display if necessary (Gemini uses "model", our display uses "bot")
+                    const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
+                    appendMessage(senderForDisplay, msg.parts[0].text, false); // Don't save again when loading
+                });
+                if (chatHistory.length > 0 && initialMessage) {
+                    initialMessage.remove();
+                    initialMessage = null;
+                }
+            }
+        }
+
+        // Function to save chat history to localStorage
+        function saveChatHistory() {
+            localStorage.setItem('calmashChatHistory', JSON.stringify(chatHistory));
+        }
+
         // Function to append a message to the chat display
-        function appendMessage(sender, text) {
+        // The 'saveToHistory' parameter controls whether the message is added to chatHistory and localStorage
+        function appendMessage(sender, text, saveToHistory = true) {
             // Remove the initial message if it's still there
             if (initialMessage) {
                 initialMessage.remove();
@@ -102,6 +129,13 @@
 
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
+
+            // Add message to chatHistory and save to localStorage if it's a new message
+            if (saveToHistory) {
+                const role = sender === 'user' ? 'user' : 'model'; // Gemini expects 'user' or 'model'
+                chatHistory.push({ role: role, parts: [{ text: text }] });
+                saveChatHistory();
+            }
 
             // Scroll to the bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -135,7 +169,7 @@
             const userText = userInput.value.trim();
             if (userText === '') return; // Don't send empty messages
 
-            appendMessage('user', userText);
+            appendMessage('user', userText); // Append user message and save to history
             userInput.value = ''; // Clear input
 
             showTypingIndicator(true); // Show typing indicator
@@ -150,11 +184,8 @@
             } else {
                 // Call the Gemini API for other queries
                 try {
-                    const prompt = userText;
-                    let chatHistory = [];
-                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-
-                    const payload = { contents: chatHistory };
+                    // Use the entire chatHistory for the Gemini API call
+                    const payload = { contents: chatHistory }; 
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
                     const response = await fetch(apiUrl, {
@@ -186,7 +217,7 @@
 
             // Simulate a short delay before displaying bot's response to make it feel more natural
             setTimeout(() => {
-                appendMessage('bot', botResponseText);
+                appendMessage('bot', botResponseText); // Append bot message and save to history
                 showTypingIndicator(false); // Hide typing indicator
                 sendButton.disabled = false; // Re-enable button
                 userInput.disabled = false; // Re-enable input
@@ -202,8 +233,9 @@
             }
         });
 
-        // Focus on the input field when the page loads
+        // Load chat history and focus on the input field when the page loads
         window.onload = () => {
+            loadChatHistory();
             userInput.focus();
         };
     </script>
