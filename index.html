@@ -1,33 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calmash AI Chat</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calmash AI Chatbot</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom scrollbar for message area */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Ensure font-inter is applied */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-center justify-center p-4 font-inter">
 
-  <div class="container">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[70vh]">
+        <!-- Chat Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-t-2xl text-center text-lg font-bold shadow-md">
+            Calmash AI Chatbot
+        </div>
 
-    <header>
-      <h1>Calmash AI</h1>
-      <label for="model-select">Choose AI model:</label>
-      <select id="model-select" aria-label="Select AI model">
-        <option value="gemini">Calmash 1.0 Flash (Gemini 2.0 Flash)</option>
-        <option value="deepseek">Calmash 1.0 (DeepSeek)</option>
-      </select>
-    </header>
+        <!-- Messages Display Area -->
+        <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col">
+            <div class="text-center text-gray-500 mt-4" id="initial-message">
+                Type a message to start chatting!
+            </div>
+            <!-- Chat messages will be appended here -->
+        </div>
 
-    <main id="chat-box" role="log" aria-live="polite" aria-relevant="additions"></main>
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-200 flex items-center">
+            <input
+                type="text"
+                id="user-input"
+                class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                placeholder="Type your message..."
+            />
+            <button
+                id="send-button"
+                class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transform active:scale-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="w-6 h-6"
+                >
+                    <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06L5.05 13.5a.75.75 0 0 0-.75-.75h-.359L2.405 3.478ZM12.75 22.5a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06l-1.734-1.734a.75.75 0 0 0-1.06 0l-1.734 1.734a.75.75 0 0 0 0 1.06l1.734 1.734Zm6.75-8.25a.75.75 0 0 0-1.06 0l-1.734 1.734a.75.75 0 0 0 0 1.06l1.734 1.734a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06l-1.734-1.734Z" />
+                </svg>
+            </button>
+        </div>
+    </div>
 
-    <form id="input-area" onsubmit="return false;">
-      <textarea id="prompt" rows="2" placeholder="Type your message..." aria-label="Message input"></textarea>
-      <button id="send" aria-label="Send message">Send</button>
-    </form>
+    <script>
+        // Get references to DOM elements
+        const messagesContainer = document.getElementById('messages-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        // Changed from 'const' to 'let' to allow reassignment
+        let initialMessage = document.getElementById('initial-message'); 
 
-  </div>
+        // Your Gemini API Key
+        const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc'; // The user provided this API key
 
-  <script src="script.js"></script>
+        // Function to append a message to the chat display
+        function appendMessage(sender, text) {
+            // Remove the initial message if it's still there
+            if (initialMessage) {
+                initialMessage.remove();
+                initialMessage = null; // Clear the reference
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = `max-w-[75%] rounded-xl p-3 shadow-md ${
+                sender === 'user'
+                    ? 'bg-blue-500 text-white rounded-br-none'
+                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+            }`;
+            contentDiv.innerText = text; // Use innerText to prevent XSS if text comes from external source
+
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+
+            // Scroll to the bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Function to show/hide typing indicator
+        function showTypingIndicator(show) {
+            let typingIndicator = document.getElementById('typing-indicator');
+            if (show) {
+                if (!typingIndicator) {
+                    typingIndicator = document.createElement('div');
+                    typingIndicator.id = 'typing-indicator';
+                    typingIndicator.className = 'flex justify-start mb-3';
+                    typingIndicator.innerHTML = `
+                        <div class="max-w-[75%] bg-gray-200 text-gray-800 rounded-xl rounded-bl-none p-3 shadow-md animate-pulse">
+                            Thinking...
+                        </div>
+                    `;
+                    messagesContainer.appendChild(typingIndicator);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            } else {
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+        }
+
+        // Function to handle sending a message
+        async function sendMessage() {
+            const userText = userInput.value.trim();
+            if (userText === '') return; // Don't send empty messages
+
+            appendMessage('user', userText);
+            userInput.value = ''; // Clear input
+
+            showTypingIndicator(true); // Show typing indicator
+            sendButton.disabled = true; // Disable button while processing
+            userInput.disabled = true; // Disable input while processing
+
+            let botResponseText = '';
+
+            // Check for the specific "who made me" query (case-insensitive)
+            if (userText.toLowerCase().includes('who made') && userText.toLowerCase().includes('you')) {
+                botResponseText = 'I was made by Grady Hanson.';
+            } else {
+                // Call the Gemini API for other queries
+                try {
+                    const prompt = userText;
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                    const payload = { contents: chatHistory };
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        botResponseText = result.candidates[0].content.parts[0].text;
+                    } else {
+                        botResponseText = 'I apologize, I could not generate a response at this time.';
+                        console.error('Unexpected API response structure:', result);
+                    }
+                } catch (error) {
+                    console.error('Error fetching from Gemini API:', error);
+                    botResponseText = 'I am currently unable to connect to the AI. Please try again later.';
+                }
+            }
+
+            // Simulate a short delay before displaying bot's response to make it feel more natural
+            setTimeout(() => {
+                appendMessage('bot', botResponseText);
+                showTypingIndicator(false); // Hide typing indicator
+                sendButton.disabled = false; // Re-enable button
+                userInput.disabled = false; // Re-enable input
+                userInput.focus(); // Focus back on input field
+            }, 1000); // 1 second delay
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus on the input field when the page loads
+        window.onload = () => {
+            userInput.focus();
+        };
+    </script>
 </body>
 </html>
