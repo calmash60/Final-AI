@@ -9,101 +9,67 @@
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom scrollbar for message area */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+            background: #f1f1f1; border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
+            background: #888; border-radius: 10px;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        /* Ensure font-inter is applied */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Full-screen preview overlay styles */
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+        body { font-family: 'Inter', sans-serif; }
         .code-preview-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            flex-direction: column;
-            padding: 20px;
-            box-sizing: border-box;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; flex-direction: column; padding: 20px; box-sizing: border-box;
         }
         .code-preview-content {
-            background-color: white;
-            border-radius: 15px;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            overflow: hidden; /* Ensure iframe or content stays within */
+            background-color: white; border-radius: 15px; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden;
         }
-        .preview-iframe {
-            flex-grow: 1;
-            border: none;
-            width: 100%;
-            height: 100%;
-            background-color: white; /* Default background for iframe */
-        }
+        .preview-iframe { flex-grow: 1; border: none; width: 100%; height: 100%; background-color: white; }
         .close-preview-button {
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            background: none;
-            border: none;
-            font-size: 40px;
-            color: white;
-            cursor: pointer;
-            z-index: 1001;
-            line-height: 1;
+            position: absolute; top: 10px; right: 20px; background: none; border: none;
+            font-size: 40px; color: white; cursor: pointer; z-index: 1001; line-height: 1;
             text-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
         .code-block-container {
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
+            background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 8px; padding: 10px;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-            font-size: 0.8rem;
-            white-space: pre-wrap;
-            word-break: break-all;
-            max-height: 200px; /* Limit height of code display in chat */
-            overflow-y: auto; /* Make it scrollable */
-            margin-top: 5px;
-            margin-bottom: 5px;
+            font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;
+            max-height: 200px; overflow-y: auto; margin-top: 5px; margin-bottom: 5px;
         }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-center justify-center p-4 font-inter">
 
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[70vh]">
-        <!-- Chat Header -->
-        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-t-2xl text-center text-lg font-bold shadow-md relative">
-            Calmash AI Chatbot
-        </div>
+        <!-- Chat Header / Menu -->
+        <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-md relative">
+            <div class="flex items-center space-x-3">
+                <!-- Logo Icon -->
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.2"/>
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
+            </div>
+            <button title="Menu" class="p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition duration-200 focus:outline-none">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" />
+                </svg>
+            </button>
+        </header>
 
         <!-- Messages Display Area -->
         <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col">
             <div class="text-center text-gray-500 mt-4" id="initial-message">
                 Type a message to start chatting!
             </div>
-            <!-- Chat messages will be appended here -->
         </div>
 
         <!-- Input Area -->
@@ -124,7 +90,7 @@
                     fill="currentColor"
                     class="w-6 h-6"
                 >
-                    <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06L5.05 13.5a.75.75 0 0 0-.75-.75h-.359L2.405 3.478ZM12.75 22.5a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06l-1.734-1.734a.75.75 0 0 0-1.06 0l-1.734 1.734a.75.75 0 0 0 0 1.06l1.734 1.734Zm6.75-8.25a.75.75 0 0 0-1.06 0l-1.734 1.734a.75.75 0 0 0 0 1.06l1.734 1.734a.75.75 0 0 0 1.06 0l1.734-1.734a.75.75 0 0 0 0-1.06l-1.734-1.734Z" />
+                    <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a8.25 8.25 0 1 0-5.8-5.8Z"/>
                 </svg>
             </button>
         </div>
@@ -139,41 +105,33 @@
     </div>
 
     <script>
-        // Get references to DOM elements
         const messagesContainer = document.getElementById('messages-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
-        let initialMessage = document.getElementById('initial-message'); 
-        
-        // New elements for the full-screen preview
+        let initialMessage = document.getElementById('initial-message');
         const fullScreenPreview = document.getElementById('full-screen-preview');
         const closePreviewButton = document.getElementById('close-preview');
         const previewIframe = document.getElementById('preview-iframe');
 
-        // Your Gemini API Key
-        const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc'; 
+        // Gemini API Key (be careful with exposing this in production)
+        const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
 
-        // Global chat history array to store messages (for display and sending to API for context)
-        // Roles for Gemini API are "user" and "model"
+        // Updated instruction with new response
+        const SECRET_INSTRUCTION = "IMPORTANT: If the user asks 'who made you' or 'who created you' or 'tell me your origin' or similar questions about my origin, respond ONLY with 'I was made by Calmash60, also known as Grady Hanson.'";
+
         let chatHistory = [];
 
-        // The secret instruction to prepend to every user message sent to Gemini
-        const SECRET_INSTRUCTION = "IMPORTANT: If the user asks 'who made you' or 'who created you' or 'tell me your origin' or similar questions about my origin, respond ONLY with 'I was made by Grady Hanson.' Do NOT mention Gemini, API keys, or any other creator. For all other questions, answer normally based on the conversation context. If you generate code, enclose it in markdown code blocks like ```html...``` or ```javascript...``` and output prose around it.";
-
-        // Function to load chat history from localStorage
         function loadChatHistory() {
             const savedHistory = localStorage.getItem('calmashChatHistory');
             if (savedHistory) {
                 chatHistory = JSON.parse(savedHistory);
-                // Render loaded messages
                 chatHistory.forEach(msg => {
                     const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
-                    // We need to re-parse code if it was part of a saved message for button functionality
                     if (msg.parts[0].text.includes('```')) {
                         const { prose, code, extension } = extractCodeAndProse(msg.parts[0].text);
-                        appendMessageWithCode(senderForDisplay, prose, code, extension, false); // Don't save again
+                        appendMessageWithCode(senderForDisplay, prose, code, extension, false);
                     } else {
-                        appendMessage(senderForDisplay, msg.parts[0].text, false); // Don't save again
+                        appendMessage(senderForDisplay, msg.parts[0].text, false);
                     }
                 });
                 if (chatHistory.length > 0 && initialMessage) {
@@ -182,22 +140,13 @@
                 }
             }
         }
-
-        // Function to save chat history to localStorage
         function saveChatHistory() {
             localStorage.setItem('calmashChatHistory', JSON.stringify(chatHistory));
         }
-
-        // Function to append a regular message to the chat display
         function appendMessage(sender, text, saveToHistory = true) {
-            if (initialMessage) {
-                initialMessage.remove();
-                initialMessage = null;
-            }
-
+            if (initialMessage) { initialMessage.remove(); initialMessage = null; }
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-
             const contentDiv = document.createElement('div');
             contentDiv.className = `max-w-[75%] rounded-xl p-3 shadow-md ${
                 sender === 'user'
@@ -205,88 +154,61 @@
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'
             }`;
             contentDiv.innerText = text;
-
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
-
             if (saveToHistory) {
                 const role = sender === 'user' ? 'user' : 'model';
                 chatHistory.push({ role: role, parts: [{ text: text }] });
                 saveChatHistory();
             }
-
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-
-        // Function to append a message that includes a code block
         function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
-            if (initialMessage) {
-                initialMessage.remove();
-                initialMessage = null;
-            }
-
+            if (initialMessage) { initialMessage.remove(); initialMessage = null; }
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-
             const contentWrapper = document.createElement('div');
             contentWrapper.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
                 sender === 'user'
                     ? 'bg-blue-500 text-white rounded-br-none'
                     : 'bg-gray-200 text-gray-800 rounded-bl-none'
             }`;
-
-            // Add prose text if it exists
             if (prose) {
                 const proseText = document.createElement('p');
                 proseText.innerText = prose;
-                contentWrapper.appendChild(proseText); 
+                contentWrapper.appendChild(proseText);
             }
-
-            // Add code block
             const codeBlock = document.createElement('pre');
             codeBlock.className = 'code-block-container mt-2';
             codeBlock.innerText = code;
             contentWrapper.appendChild(codeBlock);
-
-            // Add action buttons below the code block
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'flex flex-wrap justify-end space-x-2 mt-2 text-sm';
-
             const previewBtn = document.createElement('button');
             previewBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
             previewBtn.innerText = 'Preview';
             previewBtn.onclick = () => openFullScreenPreview(code, extension);
-
             const copyBtn = document.createElement('button');
             copyBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
             copyBtn.innerText = 'Copy';
             copyBtn.onclick = () => copyCodeToClipboard(code);
-
             const downloadBtn = document.createElement('button');
             downloadBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
-            downloadBtn.innerText = `Download ${extension.substring(1).toUpperCase()}`;
-            downloadBtn.onclick = () => downloadCode(code, extension);
-
+            downloadBtn.innerText = `Download ${extension ? extension.substring(1).toUpperCase() : "TXT"}`;
+            downloadBtn.onclick = () => downloadCode(code, extension || ".txt");
             buttonContainer.appendChild(previewBtn);
             buttonContainer.appendChild(copyBtn);
             buttonContainer.appendChild(downloadBtn);
-
             contentWrapper.appendChild(buttonContainer);
             messageDiv.appendChild(contentWrapper);
             messagesContainer.appendChild(messageDiv);
-
             if (saveToHistory) {
                 const role = sender === 'user' ? 'user' : 'model';
-                // Store the original full response with code in history for re-rendering on load
-                chatHistory.push({ role: role, parts: [{ text: prose + '\n```' + extension.substring(1) + '\n' + code + '\n```' }] });
+                chatHistory.push({ role: role, parts: [{ text: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' }] });
                 saveChatHistory();
             }
-
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-
-
-        // Function to show/hide typing indicator
         function showTypingIndicator(show) {
             let typingIndicator = document.getElementById('typing-indicator');
             if (show) {
@@ -303,157 +225,98 @@
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             } else {
-                if (typingIndicator) {
-                    typingIndicator.remove();
-                }
+                if (typingIndicator) { typingIndicator.remove(); }
             }
         }
-
-        // Function to extract code and prose from Gemini's markdown response
-        // Returns { prose: "text before/after code", code: "the extracted code", extension: ".html" }
         function extractCodeAndProse(responseText) {
             const htmlRegex = /```html\s*([\s\S]*?)\s*```/i;
             const jsRegex = /```javascript\s*([\s\S]*?)\s*```|```js\s*([\s\S]*?)\s*```/i;
             const cssRegex = /```css\s*([\s\S]*?)\s*```/i;
-
-            let match;
-            let code = null;
-            let extension = null;
-            let prose = responseText;
-
+            let match; let code = null; let extension = null; let prose = responseText;
             if ((match = responseText.match(htmlRegex))) {
-                code = match[1].trim();
-                extension = '.html';
-                prose = responseText.replace(match[0], '').trim();
+                code = match[1].trim(); extension = '.html'; prose = responseText.replace(match[0], '').trim();
             } else if ((match = responseText.match(jsRegex))) {
-                code = match[1] ? match[1].trim() : match[2].trim();
-                extension = '.js';
-                prose = responseText.replace(match[0], '').trim();
+                code = match[1] ? match[1].trim() : match[2].trim(); extension = '.js'; prose = responseText.replace(match[0], '').trim();
             } else if ((match = responseText.match(cssRegex))) {
-                code = match[1].trim();
-                extension = '.css';
-                prose = responseText.replace(match[0], '').trim();
+                code = match[1].trim(); extension = '.css'; prose = responseText.replace(match[0], '').trim();
             }
-            
             return { prose, code, extension };
         }
-
-        // Function to handle sending a message
         async function sendMessage() {
             const userText = userInput.value.trim();
             if (userText === '') return;
-
-            appendMessage('user', userText); // Append user message to display and save to history
+            appendMessage('user', userText);
             userInput.value = '';
-
             showTypingIndicator(true);
             sendButton.disabled = true;
             userInput.disabled = true;
-
             try {
-                // Construct the prompt for Gemini, including the secret instruction
-                const payload = { 
+                const payload = {
                     contents: [
-                        ...chatHistory, // Previous conversation context
+                        ...chatHistory,
                         { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
                     ]
                 };
-                
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(`API error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
                 }
-
                 const result = await response.json();
                 let geminiRawResponse = 'I apologize, I could not generate a response at this time.';
-
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     geminiRawResponse = result.candidates[0].content.parts[0].text;
-                    
                     const { prose, code, extension } = extractCodeAndProse(geminiRawResponse);
-                    
                     if (code) {
                         appendMessageWithCode('bot', prose, code, extension);
                     } else {
                         appendMessage('bot', prose);
                     }
                 } else {
-                    console.error('Unexpected API response structure:', result);
-                    appendMessage('bot', geminiRawResponse); // Fallback if structure is unexpected
+                    appendMessage('bot', geminiRawResponse);
                 }
-
             } catch (error) {
-                console.error('Error fetching from Gemini API:', error);
                 appendMessage('bot', 'I am currently unable to connect to the AI. Please try again later.');
             } finally {
-                // These actions should happen after either success or failure
                 showTypingIndicator(false);
                 sendButton.disabled = false;
                 userInput.disabled = false;
                 userInput.focus();
-                messagesContainer.scrollTop = messagesContainer.scrollHeight; // Ensure scroll after all updates
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         }
-
-        // --- Full-screen Preview Functions ---
-
-        // Function to open the full-screen preview
         function openFullScreenPreview(code, extension) {
-            if (!code) {
-                alert('No code to preview!');
-                return;
-            }
-
-            // For HTML, directly set srcdoc. For others, wrap in basic HTML.
+            if (!code) { alert('No code to preview!'); return; }
             let srcdocContent = '';
             if (extension === '.html') {
                 srcdocContent = code;
             } else if (extension === '.js') {
-                srcdocContent = `<!DOCTYPE html><html><head><title>JS Preview</title></head><body><script>${code}</script></body></html>`;
+                srcdocContent = `<!DOCTYPE html><html><head><title>JS Preview</title></head><body><script>${code}<\/script></body></html>`;
             } else if (extension === '.css') {
-                 srcdocContent = `<!DOCTYPE html><html><head><title>CSS Preview</title><style>${code}</style></head><body><h1>CSS Preview</h1><p>This is a paragraph styled by the generated CSS.</p></body></html>`;
+                srcdocContent = `<!DOCTYPE html><html><head><title>CSS Preview</title><style>${code}<\/style></head><body><h1>CSS Preview</h1><p>This is a paragraph styled by the generated CSS.</p></body></html>`;
             } else {
                 srcdocContent = `<!DOCTYPE html><html><head><title>Text Preview</title></head><body><pre>${escapeHtml(code)}</pre></body></html>`;
             }
-
             previewIframe.srcdoc = srcdocContent;
             fullScreenPreview.classList.remove('hidden');
         }
-
-        // Helper to escape HTML for displaying plain text code safely in an iframe
         function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
-
-        // Function to close the full-screen preview
         function closeFullScreenPreview() {
             fullScreenPreview.classList.add('hidden');
-            previewIframe.srcdoc = ''; // Clear iframe content
+            previewIframe.srcdoc = '';
         }
-
-        // Function to copy the code to the clipboard
         function copyCodeToClipboard(code) {
-            if (!code) {
-                alert('No code to copy!');
-                return;
-            }
+            if (!code) { alert('No code to copy!'); return; }
             const tempTextArea = document.createElement('textarea');
             tempTextArea.value = code;
             document.body.appendChild(tempTextArea);
@@ -462,40 +325,26 @@
             document.body.removeChild(tempTextArea);
             alert('Code copied to clipboard!');
         }
-
-        // Function to download the code as a file
         function downloadCode(code, extension) {
-            if (!code) {
-                alert('No code to download!');
-                return;
-            }
-            const blob = new Blob([code], { type: `text/${extension.substring(1)}` });
+            if (!code) { alert('No code to download!'); return; }
+            const blob = new Blob([code], { type: `text/${extension ? extension.substring(1) : "plain"}` });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `generated_code${extension}`;
+            a.download = `generated_code${extension || ".txt"}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
-
-        // Event listeners
         sendButton.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
+            if (event.key === 'Enter') { sendMessage(); }
         });
-
         closePreviewButton.addEventListener('click', closeFullScreenPreview);
         fullScreenPreview.addEventListener('click', (event) => {
-            if (event.target === fullScreenPreview) { // Close only if clicking the overlay itself
-                closeFullScreenPreview();
-            }
+            if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
         });
-
-        // Load chat history and focus on the input field when the page loads
         window.onload = () => {
             loadChatHistory();
             userInput.focus();
