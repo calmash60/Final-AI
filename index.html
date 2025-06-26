@@ -10,7 +10,7 @@
     .custom-scrollbar::-webkit-scrollbar { width: 8px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-    .code-block-container { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.9rem; white-space: pre-wrap; word-break: break-all; margin: 10px 0; }
+    .code-block-container { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.96em; }
     .fixed-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(60,60,100,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
     .modal-card { background: white; border-radius: 1.2rem; padding: 2rem 2.4rem 2rem 2.4rem; box-shadow: 0 6px 32px rgba(30,30,60,.13); min-width: 300px; max-width: 95vw;}
     .code-preview-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: flex; align-items: center; justify-content: center; }
@@ -21,48 +21,59 @@
       color: #7a7a7a !important;
       cursor: not-allowed !important;
     }
+    @media (max-width: 1024px) {
+      .sidebar-overlay {
+        display: block !important;
+      }
+    }
     @media (max-width: 800px) {
-      .chat-sidebar { position: absolute; left: 0; z-index: 100; }
-      .chat-main { margin-left: 0 !important; }
       .preview-iframe { width: 98vw; height: 84vh;}
     }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-start justify-center font-inter">
+<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-stretch justify-center font-inter">
 
-  <!-- Sidebar for chat sessions -->
-  <aside id="chat-sidebar" class="chat-sidebar h-screen flex flex-col p-4 shadow-lg min-w-[220px] max-w-[280px] bg-gradient-to-b from-indigo-600 to-indigo-400">
+  <!-- Sidebar for chat sessions (Drawer on mobile) -->
+  <aside id="chat-sidebar" class="chat-sidebar flex flex-col p-4 shadow-lg min-w-[220px] max-w-[280px] bg-gradient-to-b from-indigo-600 to-indigo-400 fixed lg:static z-40 top-0 left-0 h-full transition-transform duration-300 -translate-x-full lg:translate-x-0">
     <h1 class="text-2xl font-bold text-white mb-6">Chats</h1>
     <div class="flex-1 overflow-y-auto space-y-2" id="sidebar-chats"></div>
     <button id="new-chat-btn" class="mt-6 w-full bg-white bg-opacity-90 hover:bg-opacity-100 text-indigo-700 font-bold rounded-lg py-2 shadow transition">+ New Chat</button>
   </aside>
+  <div id="sidebar-overlay" class="sidebar-overlay fixed inset-0 bg-black bg-opacity-40 z-30 hidden lg:hidden" style="display:none"></div>
 
   <!-- Main chat area -->
-  <div class="chat-main bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[80vh] m-6 ml-[290px] relative">
-    <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-md relative">
+  <div class="flex-1 flex flex-col max-w-full relative lg:ml-[280px]">
+    <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 flex items-center justify-between shadow-md relative">
       <div class="flex items-center space-x-3">
+        <button id="sidebar-toggle" class="lg:hidden text-white focus:outline-none mr-2" aria-label="Open sidebar">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.2"/>
           <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
       </div>
-      <span id="model-badge" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1">
-        Calmash 1.0 Flash
-      </span>
+      <div class="flex items-center">
+        <span id="model-badge" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1">
+          Calmash 1.0 Flash
+        </span>
+      </div>
     </header>
 
     <!-- Messages Display Area -->
-    <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col">
+    <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col bg-white rounded-b-2xl rounded-t-none shadow-xl min-h-[50vh]">
       <div class="text-center text-gray-500 mt-4" id="initial-message">Type a message to start chatting!</div>
     </div>
 
     <!-- Input Area -->
-    <div class="p-4 border-t border-gray-200 flex items-center">
-      <input type="text" id="user-input" class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Type your message or /image a cat on the moon" />
+    <div class="p-4 border-t border-gray-200 flex items-center bg-white rounded-b-2xl shadow-xl">
+      <input type="text" id="user-input" class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Type your message or use /image for images..." autocomplete="off"/>
       <button id="send-button" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transform active:scale-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-          <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a8.25 8.25 0 1 0-5.8-5.8Z"/>
+          <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a6.75 6.75 0 1 1 9.47-9.47z"/>
         </svg>
       </button>
     </div>
@@ -94,7 +105,7 @@
   const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
 
   // ======= SYSTEM INSTRUCTION =========
-  const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'Groq', 'Gemini', or 'Llama' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
+  const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, or similar.";
 
   // ======= CHAT SESSIONS =======
   const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-calmash10flash';
@@ -227,7 +238,6 @@
           const { prose, code, extension } = extractCodeAndProse(msg.content);
           appendMessageWithCode(senderForDisplay, prose, code, extension, false);
         } else if (msg.parts && msg.parts[0]?.inline_data && msg.parts[0]?.inline_data?.mime_type?.startsWith('image/')) {
-          // For Gemini image replies
           appendImageMessage(senderForDisplay, msg.parts[0]?.inline_data?.data, false);
         } else {
           appendMessage(senderForDisplay, msg.parts?.[0]?.text || msg.content, false);
@@ -244,6 +254,9 @@
   const fullScreenPreview = document.getElementById('full-screen-preview');
   const closePreviewButton = document.getElementById('close-preview');
   const previewIframe = document.getElementById('preview-iframe');
+  const sidebar = document.getElementById('chat-sidebar');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
 
   function saveChatHistory() {
     const chat = getActiveChat();
@@ -334,7 +347,7 @@
     const img = document.createElement('img');
     img.src = `data:image/png;base64,${base64data}`;
     img.alt = "Generated Image";
-    img.className = 'rounded shadow border w-full max-w-xs mx-auto';
+    img.className = 'rounded shadow border w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl h-auto object-contain';
     contentDiv.appendChild(img);
     messageDiv.appendChild(contentDiv);
     messagesContainer.appendChild(messageDiv);
@@ -412,7 +425,7 @@
     }
   }
 
-  // -- Calmash 1.0 Flash Text --
+  // -- Gemini 2.0 Flash Text (free) --
   async function handleCalmashText(chat, userText) {
     const payload = {
       contents: [
@@ -420,7 +433,7 @@
         { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
       ]
     };
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -449,18 +462,17 @@
     }
   }
 
-  // -- Calmash 1.0 Flash Image Gen --
+  // -- Gemini 2.0 Flash Exp Image Generation (free) --
   async function handleCalmashImageGen(prompt, chat) {
-    // Follows Google Gemini image gen docs for gemini-2.0-flash-preview
     const payload = {
       contents: [
         { role: "user", parts: [ { text: prompt } ] }
       ],
       generationConfig: {
-        responseMimeType: "image/png"
+        responseMimeType: "application/json"
       }
     };
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -473,7 +485,10 @@
       return;
     }
     const result = await response.json();
-    const imagePart = result.candidates?.[0]?.content?.parts?.find(p => p.inline_data && p.inline_data.mime_type === "image/png");
+    // Look for image inside JSON response
+    const imagePart = result.candidates?.[0]?.content?.parts?.find(
+      p => p.inline_data && p.inline_data.mime_type?.startsWith("image/")
+    );
     if (imagePart && imagePart.inline_data && imagePart.inline_data.data) {
       appendImageMessage('bot', imagePart.inline_data.data);
     } else {
@@ -554,6 +569,7 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
   sendButton.addEventListener('click', sendMessage);
   userInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') { sendMessage(); }
@@ -562,6 +578,27 @@
   fullScreenPreview.addEventListener('click', (event) => {
     if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
   });
+
+  // ======= Responsive Sidebar Logic =======
+  function showSidebar() {
+    sidebar.classList.remove('-translate-x-full');
+    sidebarOverlay.style.display = 'block';
+  }
+  function hideSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    sidebarOverlay.style.display = 'none';
+  }
+  sidebarToggle.addEventListener('click', showSidebar);
+  sidebarOverlay.addEventListener('click', hideSidebar);
+
+  // Hide sidebar on desktop resize
+  window.addEventListener('resize', () => {
+    if(window.innerWidth >= 1024) {
+      hideSidebar();
+    }
+  });
+
+  // ======= INIT =======
   window.onload = () => {
     loadChatsFromStorage();
     if (chats.length === 0) newChatSession('New Chat');
@@ -576,4 +613,32 @@
   };
   </script>
 </body>
-</html>
+</html>) => {
+    if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
+  });
+
+  // ======= Responsive Sidebar Logic =======
+  function showSidebar() {
+    sidebar.classList.remove('-translate-x-full');
+    sidebarOverlay.style.display = 'block';
+  }
+  function hideSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    sidebarOverlay.style.display = 'none';
+  }
+  sidebarToggle.addEventListener('click', showSidebar);
+  sidebarOverlay.addEventListener('click', hideSidebar);
+
+  // Hide sidebar on desktop resize
+  window.addEventListener('resize', () => {
+    if(window.innerWidth >= 1024) {
+      hideSidebar();
+    }
+  });
+
+  // ======= INIT =======
+  window.onload = () => {
+    loadChatsFromStorage();
+    if (chats.length === 0) newChatSession('New Chat');
+    else {
+      if (!activeChatId || !chats.find(c => c.id === activeCha
