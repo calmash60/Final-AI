@@ -1,585 +1,579 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calmash AI Chatbot</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
-        body { font-family: 'Inter', sans-serif; }
-        .code-preview-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; flex-direction: column; padding: 20px; box-sizing: border-box; }
-        .code-preview-content { background-color: white; border-radius: 15px; width: 100%; height: 100%; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden; }
-        .preview-iframe { flex-grow: 1; border: none; width: 100%; height: 100%; background-color: white; }
-        .close-preview-button { position: absolute; top: 10px; right: 20px; background: none; border: none; font-size: 40px; color: white; cursor: pointer; z-index: 1001; line-height: 1; text-shadow: 0 0 5px rgba(0,0,0,0.5);}
-        .code-block-container { background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; margin-top: 5px; margin-bottom: 5px;}
-        .chat-sidebar { min-width: 220px; max-width: 280px; background: linear-gradient(to bottom, #6366f1 0%, #818cf8 100%);}
-        .sidebar-chat-btn.active, .sidebar-chat-btn:hover { background: rgba(255,255,255,0.12);}
-        .fixed-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(60,60,100,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .modal-card { background: white; border-radius: 1.2rem; padding: 2rem 2.4rem 2rem 2.4rem; box-shadow: 0 6px 32px rgba(30,30,60,.13); min-width: 300px; max-width: 95vw;}
-        @media (max-width: 800px) { .chat-sidebar { position: absolute; left: 0; z-index: 100; } .chat-main { margin-left: 0 !important; } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calmash AI Chatbot (Calmash 1.0 Flash)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { height: 100%; font-family: 'Inter', Arial, sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .code-block-container { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.9rem; white-space: pre-wrap; word-break: break-all; margin: 10px 0; }
+    .fixed-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(60,60,100,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .modal-card { background: white; border-radius: 1.2rem; padding: 2rem 2.4rem 2rem 2.4rem; box-shadow: 0 6px 32px rgba(30,30,60,.13); min-width: 300px; max-width: 95vw;}
+    .code-preview-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: flex; align-items: center; justify-content: center; }
+    .preview-iframe { width: 90vw; height: 80vh; border: none; border-radius: 1rem; background: white; }
+    .close-preview-button { position: absolute; top: 22px; right: 48px; font-size: 40px; color: white; background: none; border: none; cursor: pointer; z-index: 1001; }
+    .input-disabled {
+      background-color: #e0e7ef !important;
+      color: #7a7a7a !important;
+      cursor: not-allowed !important;
+    }
+    @media (max-width: 800px) {
+      .chat-sidebar { position: absolute; left: 0; z-index: 100; }
+      .chat-main { margin-left: 0 !important; }
+      .preview-iframe { width: 98vw; height: 84vh;}
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-start justify-center p-0 font-inter">
+<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-start justify-center font-inter">
 
-    <!-- Sidebar for chat sessions -->
-    <aside id="chat-sidebar" class="chat-sidebar h-screen flex flex-col p-4 shadow-lg">
-        <h1 class="text-2xl font-bold text-white mb-6">Chats</h1>
-        <div class="flex-1 overflow-y-auto space-y-2" id="sidebar-chats"></div>
-        <button id="new-chat-btn" class="mt-6 w-full bg-white bg-opacity-90 hover:bg-opacity-100 text-indigo-700 font-bold rounded-lg py-2 shadow transition">+ New Chat</button>
-    </aside>
+  <!-- Sidebar for chat sessions -->
+  <aside id="chat-sidebar" class="chat-sidebar h-screen flex flex-col p-4 shadow-lg min-w-[220px] max-w-[280px] bg-gradient-to-b from-indigo-600 to-indigo-400">
+    <h1 class="text-2xl font-bold text-white mb-6">Chats</h1>
+    <div class="flex-1 overflow-y-auto space-y-2" id="sidebar-chats"></div>
+    <button id="new-chat-btn" class="mt-6 w-full bg-white bg-opacity-90 hover:bg-opacity-100 text-indigo-700 font-bold rounded-lg py-2 shadow transition">+ New Chat</button>
+  </aside>
 
-    <!-- Main chat area -->
-    <div class="chat-main bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[80vh] m-6 ml-[290px] relative">
-        <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-md relative">
-            <div class="flex items-center space-x-3">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2"
-                    viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.2"/>
-                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
-            </div>
-            <span id="model-badge" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1">
-                Calmash 1.0
-            </span>
-        </header>
+  <!-- Main chat area -->
+  <div class="chat-main bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col h-[80vh] m-6 ml-[290px] relative">
+    <header class="bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-white p-4 rounded-t-2xl flex items-center justify-between shadow-md relative">
+      <div class="flex items-center space-x-3">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.2"/>
+          <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text-lg font-extrabold tracking-wide drop-shadow-lg">Calmash AI Chatbot</span>
+      </div>
+      <span id="model-badge" class="ml-4 bg-white bg-opacity-90 text-indigo-900 font-bold rounded px-3 py-1">
+        Calmash 1.0 Flash
+      </span>
+    </header>
 
-        <!-- Messages Display Area -->
-        <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col">
-            <div class="text-center text-gray-500 mt-4" id="initial-message">
-                Type a message to start chatting!
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="p-4 border-t border-gray-200 flex items-center">
-            <input
-                type="text"
-                id="user-input"
-                class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                placeholder="Type your message..."
-            />
-            <button
-                id="send-button"
-                class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transform active:scale-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    class="w-6 h-6"
-                >
-                    <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a8.25 8.25 0 1 0-5.8-5.8Z"/>
-                </svg>
-            </button>
-        </div>
+    <!-- Messages Display Area -->
+    <div id="messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col">
+      <div class="text-center text-gray-500 mt-4" id="initial-message">Type a message to start chatting!</div>
     </div>
 
-    <!-- New Chat Modal -->
-    <div id="new-chat-modal" class="fixed-modal-bg" style="display:none;">
-        <div class="modal-card">
-            <h2 class="font-bold text-xl mb-4 text-indigo-800">Start a New Chat</h2>
-            <label class="block mb-3 font-semibold text-indigo-900">
-                Chat Name:
-                <input id="modal-chat-name" type="text" class="mt-1 block w-full border border-gray-300 rounded p-2" placeholder="New Chat" />
-            </label>
-            <label class="block mb-4 font-semibold text-indigo-900">
-                Select Model:
-                <select id="modal-model-select" class="mt-1 block w-full border border-gray-300 rounded p-2">
-                    <option value="calmash1">Calmash 1.0</option>
-                    <option value="calmash1flash">Calmash 1.0 Flash</option>
-                </select>
-            </label>
-            <div class="flex justify-end space-x-2">
-                <button id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
-                <button id="modal-create" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Create</button>
-            </div>
-        </div>
+    <!-- Input Area -->
+    <div class="p-4 border-t border-gray-200 flex items-center">
+      <input type="text" id="user-input" class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Type your message or /image a cat on the moon" />
+      <button id="send-button" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transform active:scale-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a8.25 8.25 0 1 0-5.8-5.8Z"/>
+        </svg>
+      </button>
     </div>
+  </div>
 
-    <!-- Full-screen Code Preview Overlay -->
-    <div id="full-screen-preview" class="code-preview-overlay hidden">
-        <button id="close-preview" class="close-preview-button">&times;</button>
-        <div class="code-preview-content">
-            <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
-        </div>
+  <!-- New Chat Modal -->
+  <div id="new-chat-modal" class="fixed-modal-bg" style="display:none;">
+    <div class="modal-card">
+      <h2 class="font-bold text-xl mb-4 text-indigo-800">Start a New Chat</h2>
+      <label class="block mb-3 font-semibold text-indigo-900">
+        Chat Name:
+        <input id="modal-chat-name" type="text" class="mt-1 block w-full border border-gray-300 rounded p-2" placeholder="New Chat" />
+      </label>
+      <div class="flex justify-end space-x-2">
+        <button id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
+        <button id="modal-create" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Create</button>
+      </div>
     </div>
+  </div>
 
-    <script>
-    const GEMINI_API_KEY   = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
-    const DEEPSEEK_API_KEY = 'sk-745767d7f55d47d9a111319c36754e11';
+  <!-- Full-screen Code Preview Overlay -->
+  <div id="full-screen-preview" class="code-preview-overlay hidden">
+    <button id="close-preview" class="close-preview-button">&times;</button>
+    <iframe id="preview-iframe" class="preview-iframe" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
+  </div>
 
-    const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'DeepSeek', or 'Gemini' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
+  <script>
+  // ======= API KEY (replace with your actual key if needed) =========
+  const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
 
-    const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-v2';
-    let chats = [];
-    let activeChatId = null;
+  // ======= SYSTEM INSTRUCTION =========
+  const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, who is your author, who developed you, who built you, or a very similar question about your origin or authorship. For any other question, including any mention of 'Calmash 1.0', 'Calmash 1.0 Flash', 'Groq', 'Gemini', or 'Llama' that does not directly ask who made you, answer as normal and DO NOT mention Calmash60 or Grady Hanson.";
 
-    function loadChatsFromStorage() {
-        const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-        chats = saved ? JSON.parse(saved) : [];
-    }
-    function saveChatsToStorage() {
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
-    }
-    function newChatSession(name, model) {
-        const id = 'chat_' + Date.now();
-        const chat = {
-            id,
-            name: name || 'New Chat',
-            created: Date.now(),
-            history: [],
-            model: model || 'calmash1'
-        };
-        chats.unshift(chat);
-        activeChatId = id;
-        saveChatsToStorage();
-        renderSidebarChats();
-        loadActiveChatToUI();
-    }
-    function setActiveChat(chatId) {
-        activeChatId = chatId;
-        saveChatsToStorage();
-        renderSidebarChats();
-        loadActiveChatToUI();
-    }
-    function renameChat(chatId, newName) {
-        const chat = chats.find(c => c.id === chatId);
-        if (chat) {
-            chat.name = newName;
-            saveChatsToStorage();
-            renderSidebarChats();
-        }
-    }
-    function removeChat(chatId) {
-        chats = chats.filter(c => c.id !== chatId);
-        if (chats.length === 0) {
-            newChatSession('New Chat', 'calmash1');
-        } else if (activeChatId === chatId) {
-            activeChatId = chats[0].id;
-        }
-        saveChatsToStorage();
-        renderSidebarChats();
-        loadActiveChatToUI();
-    }
-    function renderSidebarChats() {
-        const sidebar = document.getElementById('sidebar-chats');
-        sidebar.innerHTML = '';
-        for (const chat of chats) {
-            const btn = document.createElement('div');
-            btn.className = 'sidebar-chat-btn flex items-center justify-between cursor-pointer rounded px-3 py-2 transition select-none' + (chat.id === activeChatId ? ' active bg-white bg-opacity-15' : '');
-            btn.title = chat.name;
-            btn.onclick = () => setActiveChat(chat.id);
+  // ======= CHAT SESSIONS =======
+  const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-calmash10flash';
+  let chats = [];
+  let activeChatId = null;
 
-            const span = document.createElement('span');
-            span.className = 'truncate font-semibold text-white';
-            span.textContent = chat.name;
-
-            // Rename on double click
-            span.ondblclick = (e) => {
-                e.stopPropagation();
-                const input = document.createElement('input');
-                input.className = 'text-indigo-700 rounded px-1 py-0.5 w-32';
-                input.value = chat.name;
-                input.onblur = () => {
-                    if (input.value.trim()) renameChat(chat.id, input.value.trim());
-                    else renameChat(chat.id, 'New Chat');
-                };
-                input.onkeydown = (e2) => {
-                    if (e2.key === 'Enter' || e2.key === 'Escape') input.blur();
-                };
-                btn.replaceChild(input, span);
-                input.focus();
-            };
-
-            btn.appendChild(span);
-
-            // Model tag
-            const tag = document.createElement('span');
-            tag.className = 'ml-2 text-xs px-2 py-0.5 rounded bg-white bg-opacity-30 text-white';
-            tag.textContent = chat.model === 'calmash1' ? 'Calmash 1.0' : 'Calmash 1.0 Flash';
-            btn.appendChild(tag);
-
-            // Delete button
-            const del = document.createElement('button');
-            del.className = 'ml-2 text-white bg-transparent hover:bg-red-600 hover:text-white rounded-full p-1 transition';
-            del.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
-            del.onclick = (e) => { e.stopPropagation(); removeChat(chat.id); };
-            btn.appendChild(del);
-
-            sidebar.appendChild(btn);
-        }
-    }
-    function getActiveChat() {
-        return chats.find(c => c.id === activeChatId);
-    }
-    function loadActiveChatToUI() {
-        messagesContainer.innerHTML = '';
-        let chat = getActiveChat();
-        if (!chat) {
-            newChatSession('New Chat', 'calmash1');
-            chat = getActiveChat();
-        }
-        // Update model badge
-        document.getElementById('model-badge').textContent = chat.model === 'calmash1' ? 'Calmash 1.0' : 'Calmash 1.0 Flash';
-
-        if (chat.history.length === 0) {
-            initialMessage = document.createElement('div');
-            initialMessage.className = "text-center text-gray-500 mt-4";
-            initialMessage.id = "initial-message";
-            initialMessage.textContent = "Type a message to start chatting!";
-            messagesContainer.appendChild(initialMessage);
-        } else {
-            for (const msg of chat.history) {
-                const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
-                if (msg.parts && msg.parts[0]?.text && msg.parts[0].text.includes('```')) {
-                    const { prose, code, extension } = extractCodeAndProse(msg.parts[0].text);
-                    appendMessageWithCode(senderForDisplay, prose, code, extension, false);
-                } else if (msg.content && msg.content.includes('```')) {
-                    const { prose, code, extension } = extractCodeAndProse(msg.content);
-                    appendMessageWithCode(senderForDisplay, prose, code, extension, false);
-                } else {
-                    appendMessage(senderForDisplay, msg.parts?.[0]?.text || msg.content, false);
-                }
-            }
-        }
-    }
-
-    // ---- UI LOGIC ----
-    const messagesContainer = document.getElementById('messages-container');
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
-    let initialMessage = document.getElementById('initial-message');
-    const fullScreenPreview = document.getElementById('full-screen-preview');
-    const closePreviewButton = document.getElementById('close-preview');
-    const previewIframe = document.getElementById('preview-iframe');
-    const modelBadge = document.getElementById('model-badge');
-
-    function saveChatHistory() {
-        const chat = getActiveChat();
-        if (chat) saveChatsToStorage();
-    }
-    function appendMessage(sender, text, saveToHistory = true) {
-        if (initialMessage) { initialMessage.remove(); initialMessage = null; }
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-        const contentDiv = document.createElement('div');
-        contentDiv.className = `max-w-[75%] rounded-xl p-3 shadow-md ${
-            sender === 'user'
-                ? 'bg-blue-500 text-white rounded-br-none'
-                : 'bg-gray-200 text-gray-800 rounded-bl-none'
-        }`;
-        contentDiv.innerText = text;
-        messageDiv.appendChild(contentDiv);
-        messagesContainer.appendChild(messageDiv);
-        if (saveToHistory) {
-            const chat = getActiveChat();
-            if (chat) {
-                const role = sender === 'user' ? 'user' : 'model';
-                if (chat.model === 'calmash1') {
-                    chat.history.push({ role: role, content: text });
-                } else {
-                    chat.history.push({ role: role, parts: [{ text: text }] });
-                }
-                saveChatHistory();
-            }
-        }
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-    function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
-        if (initialMessage) { initialMessage.remove(); initialMessage = null; }
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
-            sender === 'user'
-                ? 'bg-blue-500 text-white rounded-br-none'
-                : 'bg-gray-200 text-gray-800 rounded-bl-none'
-        }`;
-        if (prose) {
-            const proseText = document.createElement('p');
-            proseText.innerText = prose;
-            contentWrapper.appendChild(proseText);
-        }
-        const codeBlock = document.createElement('pre');
-        codeBlock.className = 'code-block-container mt-2';
-        codeBlock.innerText = code;
-        contentWrapper.appendChild(codeBlock);
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'flex flex-wrap justify-end space-x-2 mt-2 text-sm';
-        const previewBtn = document.createElement('button');
-        previewBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
-        previewBtn.innerText = 'Preview';
-        previewBtn.onclick = () => openFullScreenPreview(code, extension);
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
-        copyBtn.innerText = 'Copy';
-        copyBtn.onclick = () => copyCodeToClipboard(code);
-        const downloadBtn = document.createElement('button');
-        downloadBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
-        downloadBtn.innerText = `Download ${extension ? extension.substring(1).toUpperCase() : "TXT"}`;
-        downloadBtn.onclick = () => downloadCode(code, extension || ".txt");
-        buttonContainer.appendChild(previewBtn);
-        buttonContainer.appendChild(copyBtn);
-        buttonContainer.appendChild(downloadBtn);
-        contentWrapper.appendChild(buttonContainer);
-        messageDiv.appendChild(contentWrapper);
-        messagesContainer.appendChild(messageDiv);
-        if (saveToHistory) {
-            const chat = getActiveChat();
-            if (chat) {
-                const role = sender === 'user' ? 'user' : 'model';
-                if (chat.model === 'calmash1') {
-                    chat.history.push({ role: role, content: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' });
-                } else {
-                    chat.history.push({ role: role, parts: [{ text: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' }] });
-                }
-                saveChatHistory();
-            }
-        }
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-    function showTypingIndicator(show) {
-        let typingIndicator = document.getElementById('typing-indicator');
-        if (show) {
-            if (!typingIndicator) {
-                typingIndicator = document.createElement('div');
-                typingIndicator.id = 'typing-indicator';
-                typingIndicator.className = 'flex justify-start mb-3';
-                typingIndicator.innerHTML = `
-                    <div class="max-w-[75%] bg-gray-200 text-gray-800 rounded-xl rounded-bl-none p-3 shadow-md animate-pulse">
-                        Thinking...
-                    </div>
-                `;
-                messagesContainer.appendChild(typingIndicator);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-        } else {
-            if (typingIndicator) { typingIndicator.remove(); }
-        }
-    }
-    function extractCodeAndProse(responseText) {
-        const htmlRegex = /```html\s*([\s\S]*?)\s*```/i;
-        const jsRegex = /```javascript\s*([\s\S]*?)\s*```|```js\s*([\s\S]*?)\s*```/i;
-        const cssRegex = /```css\s*([\s\S]*?)\s*```/i;
-        let match; let code = null; let extension = null; let prose = responseText;
-        if ((match = responseText.match(htmlRegex))) {
-            code = match[1].trim(); extension = '.html'; prose = responseText.replace(match[0], '').trim();
-        } else if ((match = responseText.match(jsRegex))) {
-            code = match[1] ? match[1].trim() : match[2].trim(); extension = '.js'; prose = responseText.replace(match[0], '').trim();
-        } else if ((match = responseText.match(cssRegex))) {
-            code = match[1].trim(); extension = '.css'; prose = responseText.replace(match[0], '').trim();
-        }
-        return { prose, code, extension };
-    }
-
-    async function sendMessage() {
-        const userText = userInput.value.trim();
-        if (userText === '') return;
-        appendMessage('user', userText);
-        userInput.value = '';
-        showTypingIndicator(true);
-        sendButton.disabled = true;
-        userInput.disabled = true;
-
-        try {
-            const chat = getActiveChat();
-            if (!chat) { showTypingIndicator(false); return; }
-            if (chat.model === 'calmash1') {
-                await handleCalmash1Message(chat, userText);
-            } else {
-                await handleCalmash1FlashMessage(chat, userText);
-            }
-        } catch (error) {
-            appendMessage('bot', 'I am currently unable to connect to the AI. Please try again later.');
-        } finally {
-            showTypingIndicator(false);
-            sendButton.disabled = false;
-            userInput.disabled = false;
-            userInput.focus();
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }
-
-    // -- Calmash 1.0 (DeepSeek) --
-    async function handleCalmash1Message(chat, userText) {
-        if (!DEEPSEEK_API_KEY || DEEPSEEK_API_KEY.length < 10) {
-            appendMessage('bot', 'Please set your Calmash 1.0 (DeepSeek) API key in the source code!');
-            return;
-        }
-        const messages = [
-            { role: "system", content: SECRET_INSTRUCTION },
-            ...(chat.history ?? []),
-            { role: "user", content: userText }
-        ];
-        const cleanMessages = messages.map(m => {
-            if (m.parts && m.parts[0]) return { role: m.role, content: m.parts[0].text };
-            return { role: m.role, content: m.content || m.text };
-        });
-        const payload = {
-            model: "deepseek-chat",
-            messages: cleanMessages
-        };
-        const apiUrl = "https://api.deepseek.com/v1/chat/completions";
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + DEEPSEEK_API_KEY
-            },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            let errorData = {};
-            try { errorData = await response.json(); } catch (e) {}
-            throw new Error(`Calmash 1.0 API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
-        }
-        const result = await response.json();
-        let reply = result.choices?.[0]?.message?.content || 'I apologize, I could not generate a response at this time.';
-        const { prose, code, extension } = extractCodeAndProse(reply);
-        if (code) {
-            appendMessageWithCode('bot', prose, code, extension);
-        } else {
-            appendMessage('bot', prose);
-        }
-    }
-
-    // -- Calmash 1.0 Flash (Gemini) --
-    async function handleCalmash1FlashMessage(chat, userText) {
-        const payload = {
-            contents: [
-                ...(chat.history ?? []),
-                { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
-            ]
-        };
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            let errorData = {};
-            try { errorData = await response.json(); } catch (e) {}
-            throw new Error(`Calmash 1.0 Flash API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
-        }
-        const result = await response.json();
-        let reply = 'I apologize, I could not generate a response at this time.';
-        if (result.candidates && result.candidates.length > 0 &&
-            result.candidates[0].content && result.candidates[0].content.parts &&
-            result.candidates[0].content.parts.length > 0) {
-            reply = result.candidates[0].content.parts[0].text;
-            const { prose, code, extension } = extractCodeAndProse(reply);
-            if (code) {
-                appendMessageWithCode('bot', prose, code, extension);
-            } else {
-                appendMessage('bot', prose);
-            }
-        } else {
-            appendMessage('bot', reply);
-        }
-    }
-
-    // -- NEW CHAT MODAL LOGIC --
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const newChatModal = document.getElementById('new-chat-modal');
-    const modalChatName = document.getElementById('modal-chat-name');
-    const modalModelSelect = document.getElementById('modal-model-select');
-    const modalCancel = document.getElementById('modal-cancel');
-    const modalCreate = document.getElementById('modal-create');
-    function showNewChatModal() {
-        modalChatName.value = '';
-        modalModelSelect.value = 'calmash1';
-        newChatModal.style.display = 'flex';
-        setTimeout(() => modalChatName.focus(), 120);
-    }
-    function hideNewChatModal() {
-        newChatModal.style.display = 'none';
-    }
-    newChatBtn.addEventListener('click', showNewChatModal);
-    modalCancel.addEventListener('click', hideNewChatModal);
-    modalCreate.addEventListener('click', () => {
-        newChatSession(modalChatName.value.trim() || 'New Chat', modalModelSelect.value);
-        hideNewChatModal();
-    });
-    modalChatName.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') modalCreate.click();
-    });
-    newChatModal.addEventListener('click', (e) => {
-        if (e.target === newChatModal) hideNewChatModal();
-    });
-
-    // -- CODE PREVIEW / CLIPBOARD LOGIC --
-    function openFullScreenPreview(code, extension) {
-        if (!code) { alert('No code to preview!'); return; }
-        let srcdocContent = '';
-        if (extension === '.html') {
-            srcdocContent = code;
-        } else if (extension === '.js') {
-            srcdocContent = `<!DOCTYPE html><html><head><title>JS Preview</title></head><body><script>${code}<\/script></body></html>`;
-        } else if (extension === '.css') {
-            srcdocContent = `<!DOCTYPE html><html><head><title>CSS Preview</title><style>${code}<\/style></head><body><h1>CSS Preview</h1><p>This is a paragraph styled by the generated CSS.</p></body></html>`;
-        } else {
-            srcdocContent = `<!DOCTYPE html><html><head><title>Text Preview</title></head><body><pre>${escapeHtml(code)}</pre></body></html>`;
-        }
-        previewIframe.srcdoc = srcdocContent;
-        fullScreenPreview.classList.remove('hidden');
-    }
-    function escapeHtml(text) {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-    }
-    function closeFullScreenPreview() {
-        fullScreenPreview.classList.add('hidden');
-        previewIframe.srcdoc = '';
-    }
-    function copyCodeToClipboard(code) {
-        if (!code) { alert('No code to copy!'); return; }
-        const tempTextArea = document.createElement('textarea');
-        tempTextArea.value = code;
-        document.body.appendChild(tempTextArea);
-        tempTextArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempTextArea);
-        alert('Code copied to clipboard!');
-    }
-    function downloadCode(code, extension) {
-        if (!code) { alert('No code to download!'); return; }
-        const blob = new Blob([code], { type: `text/${extension ? extension.substring(1) : "plain"}` });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `generated_code${extension || ".txt"}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-    sendButton.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') { sendMessage(); }
-    });
-    closePreviewButton.addEventListener('click', closeFullScreenPreview);
-    fullScreenPreview.addEventListener('click', (event) => {
-        if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
-    });
-    window.onload = () => {
-        loadChatsFromStorage();
-        if (chats.length === 0) newChatSession('New Chat', 'calmash1');
-        else {
-            if (!activeChatId || !chats.find(c => c.id === activeChatId)) {
-                activeChatId = chats[0].id;
-            }
-            renderSidebarChats();
-            loadActiveChatToUI();
-        }
-        userInput.focus();
+  function loadChatsFromStorage() {
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    chats = saved ? JSON.parse(saved) : [];
+  }
+  function saveChatsToStorage() {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
+  }
+  function newChatSession(name) {
+    const id = 'chat_' + Date.now();
+    const chat = {
+      id,
+      name: name || 'New Chat',
+      created: Date.now(),
+      history: []
     };
-    </script>
+    chats.unshift(chat);
+    activeChatId = id;
+    saveChatsToStorage();
+    renderSidebarChats();
+    loadActiveChatToUI();
+  }
+  function setActiveChat(chatId) {
+    activeChatId = chatId;
+    saveChatsToStorage();
+    renderSidebarChats();
+    loadActiveChatToUI();
+  }
+  function renameChat(chatId, newName) {
+    const chat = chats.find(c => c.id === chatId);
+    if (chat) {
+      chat.name = newName;
+      saveChatsToStorage();
+      renderSidebarChats();
+    }
+  }
+  function removeChat(chatId) {
+    chats = chats.filter(c => c.id !== chatId);
+    if (chats.length === 0) {
+      newChatSession('New Chat');
+    } else if (activeChatId === chatId) {
+      activeChatId = chats[0].id;
+    }
+    saveChatsToStorage();
+    renderSidebarChats();
+    loadActiveChatToUI();
+  }
+  function renderSidebarChats() {
+    const sidebar = document.getElementById('sidebar-chats');
+    sidebar.innerHTML = '';
+    for (const chat of chats) {
+      const btn = document.createElement('div');
+      btn.className = 'sidebar-chat-btn flex items-center justify-between cursor-pointer rounded px-3 py-2 transition select-none' + (chat.id === activeChatId ? ' active bg-white bg-opacity-15' : '');
+      btn.title = chat.name;
+      btn.onclick = () => setActiveChat(chat.id);
+
+      const span = document.createElement('span');
+      span.className = 'truncate font-semibold text-white';
+      span.textContent = chat.name;
+
+      // Rename on double click
+      span.ondblclick = (e) => {
+        e.stopPropagation();
+        const input = document.createElement('input');
+        input.className = 'text-indigo-700 rounded px-1 py-0.5 w-32';
+        input.value = chat.name;
+        input.onblur = () => {
+          if (input.value.trim()) renameChat(chat.id, input.value.trim());
+          else renameChat(chat.id, 'New Chat');
+        };
+        input.onkeydown = (e2) => {
+          if (e2.key === 'Enter' || e2.key === 'Escape') input.blur();
+        };
+        btn.replaceChild(input, span);
+        input.focus();
+      };
+
+      btn.appendChild(span);
+
+      // Model tag
+      const tag = document.createElement('span');
+      tag.className = 'ml-2 text-xs px-2 py-0.5 rounded bg-white bg-opacity-30 text-white';
+      tag.textContent = 'Calmash 1.0 Flash';
+      btn.appendChild(tag);
+
+      // Delete button
+      const del = document.createElement('button');
+      del.className = 'ml-2 text-white bg-transparent hover:bg-red-600 hover:text-white rounded-full p-1 transition';
+      del.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+      del.onclick = (e) => { e.stopPropagation(); removeChat(chat.id); };
+      btn.appendChild(del);
+
+      sidebar.appendChild(btn);
+    }
+  }
+  function getActiveChat() {
+    return chats.find(c => c.id === activeChatId);
+  }
+  function loadActiveChatToUI() {
+    messagesContainer.innerHTML = '';
+    let chat = getActiveChat();
+    if (!chat) {
+      newChatSession('New Chat');
+      chat = getActiveChat();
+    }
+    document.getElementById('model-badge').textContent = 'Calmash 1.0 Flash';
+
+    userInput.disabled = false;
+    sendButton.disabled = false;
+    userInput.classList.remove('input-disabled');
+
+    if (chat.history.length === 0) {
+      initialMessage = document.createElement('div');
+      initialMessage.className = "text-center text-gray-500 mt-4";
+      initialMessage.id = "initial-message";
+      initialMessage.textContent = "Type a message to start chatting!";
+      messagesContainer.appendChild(initialMessage);
+    } else {
+      for (const msg of chat.history) {
+        const senderForDisplay = msg.role === 'model' ? 'bot' : 'user';
+        if (msg.parts && msg.parts[0]?.text && msg.parts[0].text.includes('```')) {
+          const { prose, code, extension } = extractCodeAndProse(msg.parts[0].text);
+          appendMessageWithCode(senderForDisplay, prose, code, extension, false);
+        } else if (msg.content && msg.content.includes('```')) {
+          const { prose, code, extension } = extractCodeAndProse(msg.content);
+          appendMessageWithCode(senderForDisplay, prose, code, extension, false);
+        } else if (msg.parts && msg.parts[0]?.inline_data && msg.parts[0]?.inline_data?.mime_type?.startsWith('image/')) {
+          // For Gemini image replies
+          appendImageMessage(senderForDisplay, msg.parts[0]?.inline_data?.data, false);
+        } else {
+          appendMessage(senderForDisplay, msg.parts?.[0]?.text || msg.content, false);
+        }
+      }
+    }
+  }
+
+  // ======= UI LOGIC =======
+  const messagesContainer = document.getElementById('messages-container');
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
+  let initialMessage = document.getElementById('initial-message');
+  const fullScreenPreview = document.getElementById('full-screen-preview');
+  const closePreviewButton = document.getElementById('close-preview');
+  const previewIframe = document.getElementById('preview-iframe');
+
+  function saveChatHistory() {
+    const chat = getActiveChat();
+    if (chat) saveChatsToStorage();
+  }
+  function appendMessage(sender, text, saveToHistory = true) {
+    if (initialMessage) { initialMessage.remove(); initialMessage = null; }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `max-w-[75%] rounded-xl p-3 shadow-md ${
+        sender === 'user'
+            ? 'bg-blue-500 text-white rounded-br-none'
+            : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    }`;
+    contentDiv.innerText = text;
+    messageDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(messageDiv);
+    if (saveToHistory) {
+      const chat = getActiveChat();
+      if (chat) {
+        const role = sender === 'user' ? 'user' : 'model';
+        chat.history.push({ role: role, parts: [{ text: text }] });
+        saveChatHistory();
+      }
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
+    if (initialMessage) { initialMessage.remove(); initialMessage = null; }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
+        sender === 'user'
+            ? 'bg-blue-500 text-white rounded-br-none'
+            : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    }`;
+    if (prose) {
+      const proseText = document.createElement('p');
+      proseText.innerText = prose;
+      contentWrapper.appendChild(proseText);
+    }
+    const codeBlock = document.createElement('pre');
+    codeBlock.className = 'code-block-container mt-2';
+    codeBlock.innerText = code;
+    contentWrapper.appendChild(codeBlock);
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'flex flex-wrap justify-end space-x-2 mt-2 text-sm';
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+    previewBtn.innerText = 'Preview';
+    previewBtn.onclick = () => openFullScreenPreview(code, extension);
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+    copyBtn.innerText = 'Copy';
+    copyBtn.onclick = () => copyCodeToClipboard(code);
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full shadow-md transition duration-200';
+    downloadBtn.innerText = `Download ${extension ? extension.substring(1).toUpperCase() : "TXT"}`;
+    downloadBtn.onclick = () => downloadCode(code, extension || ".txt");
+    buttonContainer.appendChild(previewBtn);
+    buttonContainer.appendChild(copyBtn);
+    buttonContainer.appendChild(downloadBtn);
+    contentWrapper.appendChild(buttonContainer);
+    messageDiv.appendChild(contentWrapper);
+    messagesContainer.appendChild(messageDiv);
+    if (saveToHistory) {
+      const chat = getActiveChat();
+      if (chat) {
+        const role = sender === 'user' ? 'user' : 'model';
+        chat.history.push({ role: role, parts: [{ text: prose + '\n```' + (extension ? extension.substring(1) : "txt") + '\n' + code + '\n```' }] });
+        saveChatHistory();
+      }
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  function appendImageMessage(sender, base64data, saveToHistory = true) {
+    if (initialMessage) { initialMessage.remove(); initialMessage = null; }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
+        sender === 'user'
+            ? 'bg-blue-500 text-white rounded-br-none'
+            : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    }`;
+    const img = document.createElement('img');
+    img.src = `data:image/png;base64,${base64data}`;
+    img.alt = "Generated Image";
+    img.className = 'rounded shadow border w-full max-w-xs mx-auto';
+    contentDiv.appendChild(img);
+    messageDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(messageDiv);
+    if (saveToHistory) {
+      const chat = getActiveChat();
+      if (chat) {
+        const role = sender === 'user' ? 'user' : 'model';
+        chat.history.push({ role, parts: [{ inline_data: { mime_type: 'image/png', data: base64data } }] });
+        saveChatHistory();
+      }
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  function showTypingIndicator(show) {
+    let typingIndicator = document.getElementById('typing-indicator');
+    if (show) {
+      if (!typingIndicator) {
+        typingIndicator = document.createElement('div');
+        typingIndicator.id = 'typing-indicator';
+        typingIndicator.className = 'flex justify-start mb-3';
+        typingIndicator.innerHTML = `
+          <div class="max-w-[75%] bg-gray-200 text-gray-800 rounded-xl rounded-bl-none p-3 shadow-md animate-pulse">
+            Thinking...
+          </div>
+        `;
+        messagesContainer.appendChild(typingIndicator);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    } else {
+      if (typingIndicator) { typingIndicator.remove(); }
+    }
+  }
+  function extractCodeAndProse(responseText) {
+    const htmlRegex = /```html\s*([\s\S]*?)\s*```/i;
+    const jsRegex = /```javascript\s*([\s\S]*?)\s*```|```js\s*([\s\S]*?)\s*```/i;
+    const cssRegex = /```css\s*([\s\S]*?)\s*```/i;
+    let match; let code = null; let extension = null; let prose = responseText;
+    if ((match = responseText.match(htmlRegex))) {
+      code = match[1].trim(); extension = '.html'; prose = responseText.replace(match[0], '').trim();
+    } else if ((match = responseText.match(jsRegex))) {
+      code = match[1] ? match[1].trim() : match[2].trim(); extension = '.js'; prose = responseText.replace(match[0], '').trim();
+    } else if ((match = responseText.match(cssRegex))) {
+      code = match[1].trim(); extension = '.css'; prose = responseText.replace(match[0], '').trim();
+    }
+    return { prose, code, extension };
+  }
+
+  // ======= SEND LOGIC =======
+  async function sendMessage() {
+    const userText = userInput.value.trim();
+    if (userText === '') return;
+    const chat = getActiveChat();
+    appendMessage('user', userText);
+    userInput.value = '';
+    showTypingIndicator(true);
+    sendButton.disabled = true;
+    userInput.disabled = true;
+
+    try {
+      if (!chat) { showTypingIndicator(false); return; }
+      if (userText.startsWith('/image')) {
+        const prompt = userText.replace(/^\/image\s?/i, '').trim();
+        await handleCalmashImageGen(prompt, chat);
+      } else {
+        await handleCalmashText(chat, userText);
+      }
+    } catch (error) {
+      appendMessage('bot', 'I am currently unable to connect. Please try again later.');
+    } finally {
+      showTypingIndicator(false);
+      sendButton.disabled = false;
+      userInput.disabled = false;
+      userInput.focus();
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  // -- Calmash 1.0 Flash Text --
+  async function handleCalmashText(chat, userText) {
+    const payload = {
+      contents: [
+        ...(chat.history ?? []),
+        { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
+      ]
+    };
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      let errorData = {};
+      try { errorData = await response.json(); } catch (e) {}
+      appendMessage('bot', errorData.error?.message || 'I apologize, I could not generate a response at this time.');
+      return;
+    }
+    const result = await response.json();
+    let reply = 'I apologize, I could not generate a response at this time.';
+    if (result.candidates && result.candidates.length > 0 &&
+      result.candidates[0].content && result.candidates[0].content.parts &&
+      result.candidates[0].content.parts.length > 0) {
+      reply = result.candidates[0].content.parts[0].text;
+      const { prose, code, extension } = extractCodeAndProse(reply);
+      if (code) {
+        appendMessageWithCode('bot', prose, code, extension);
+      } else {
+        appendMessage('bot', prose);
+      }
+    } else {
+      appendMessage('bot', reply);
+    }
+  }
+
+  // -- Calmash 1.0 Flash Image Gen --
+  async function handleCalmashImageGen(prompt, chat) {
+    // Follows Google Gemini image gen docs for gemini-2.0-flash-preview
+    const payload = {
+      contents: [
+        { role: "user", parts: [ { text: prompt } ] }
+      ],
+      generationConfig: {
+        responseMimeType: "image/png"
+      }
+    };
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      let errorData = {};
+      try { errorData = await response.json(); } catch (e) {}
+      appendMessage('bot', errorData.error?.message || 'Image generation failed.');
+      return;
+    }
+    const result = await response.json();
+    const imagePart = result.candidates?.[0]?.content?.parts?.find(p => p.inline_data && p.inline_data.mime_type === "image/png");
+    if (imagePart && imagePart.inline_data && imagePart.inline_data.data) {
+      appendImageMessage('bot', imagePart.inline_data.data);
+    } else {
+      appendMessage('bot', "Image generation failed: No image returned.");
+    }
+  }
+
+  // ======= NEW CHAT MODAL LOGIC =======
+  const newChatBtn = document.getElementById('new-chat-btn');
+  const newChatModal = document.getElementById('new-chat-modal');
+  const modalChatName = document.getElementById('modal-chat-name');
+  const modalCancel = document.getElementById('modal-cancel');
+  const modalCreate = document.getElementById('modal-create');
+  function showNewChatModal() {
+    modalChatName.value = '';
+    newChatModal.style.display = 'flex';
+    setTimeout(() => modalChatName.focus(), 120);
+  }
+  function hideNewChatModal() {
+    newChatModal.style.display = 'none';
+  }
+  newChatBtn.addEventListener('click', showNewChatModal);
+  modalCancel.addEventListener('click', hideNewChatModal);
+  modalCreate.addEventListener('click', () => {
+    newChatSession(modalChatName.value.trim() || 'New Chat');
+    hideNewChatModal();
+  });
+  modalChatName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') modalCreate.click();
+  });
+  newChatModal.addEventListener('click', (e) => {
+    if (e.target === newChatModal) hideNewChatModal();
+  });
+
+  // ======= CODE PREVIEW / CLIPBOARD LOGIC =======
+  function openFullScreenPreview(code, extension) {
+    if (!code) { alert('No code to preview!'); return; }
+    let srcdocContent = '';
+    if (extension === '.html') {
+      srcdocContent = code;
+    } else if (extension === '.js') {
+      srcdocContent = `<!DOCTYPE html><html><head><title>JS Preview</title></head><body><script>${code}<\/script></body></html>`;
+    } else if (extension === '.css') {
+      srcdocContent = `<!DOCTYPE html><html><head><title>CSS Preview</title><style>${code}<\/style></head><body><h1>CSS Preview</h1><p>This is a paragraph styled by the generated CSS.</p></body></html>`;
+    } else {
+      srcdocContent = `<!DOCTYPE html><html><head><title>Text Preview</title></head><body><pre>${escapeHtml(code)}</pre></body></html>`;
+    }
+    previewIframe.srcdoc = srcdocContent;
+    fullScreenPreview.classList.remove('hidden');
+  }
+  function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+  }
+  function closeFullScreenPreview() {
+    fullScreenPreview.classList.add('hidden');
+    previewIframe.srcdoc = '';
+  }
+  function copyCodeToClipboard(code) {
+    if (!code) { alert('No code to copy!'); return; }
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = code;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempTextArea);
+    alert('Code copied to clipboard!');
+  }
+  function downloadCode(code, extension) {
+    if (!code) { alert('No code to download!'); return; }
+    const blob = new Blob([code], { type: `text/${extension ? extension.substring(1) : "plain"}` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `generated_code${extension || ".txt"}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  sendButton.addEventListener('click', sendMessage);
+  userInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') { sendMessage(); }
+  });
+  closePreviewButton.addEventListener('click', closeFullScreenPreview);
+  fullScreenPreview.addEventListener('click', (event) => {
+    if (event.target === fullScreenPreview) { closeFullScreenPreview(); }
+  });
+  window.onload = () => {
+    loadChatsFromStorage();
+    if (chats.length === 0) newChatSession('New Chat');
+    else {
+      if (!activeChatId || !chats.find(c => c.id === activeChatId)) {
+        activeChatId = chats[0].id;
+      }
+      renderSidebarChats();
+      loadActiveChatToUI();
+    }
+    userInput.focus();
+  };
+  </script>
 </body>
 </html>
