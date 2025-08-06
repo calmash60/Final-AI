@@ -1,1 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calmash AI Chatbot (Calmash 1.0/1.5 Flash)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { height: 100%; font-family: 'Inter', Arial, sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #a5b4fc; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .code-block-container { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 0.97rem; overflow-x: auto; }
+    .fixed-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(60,60,100,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+    .modal-card { background: white; border-radius: 1.2rem; padding: 2rem 2.4rem 2rem 2.4rem; box-shadow: 0 6px 32px rgba(30,30,60,.13); min-width: 300px; max-width: 95vw;}
+    .code-preview-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 5000; display: flex; align-items: center; justify-content: center; }
+    .model-select {
+      background: #eef2ff;
+      border: 1px solid #a5b4fc;
+      color: #3730a3;
+      font-weight: 600;
+      border-radius: 0.7rem;
+      padding: 0.5rem 1.1rem;
+      margin-bottom: 1rem;
+      margin-top: 0.5rem;
+      font-size: 1.04rem;
+    }
+    @media (max-width: 1024px) {
+      .sidebar-overlay {
+        display: block !important;
+      }
+    }
+    .disabled {
+      color: #7a7a7a !important;
+      cursor: not-allowed !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-700 to-indigo-900 flex items-stretch justify-center font-inter">
 
+  <!-- Sidebar for chat sessions (Drawer on mobile) -->
+  <aside id="chat-sidebar" class="chat-sidebar flex flex-col p-4 shadow-lg min-w-[220px] max-w-[280px] bg-gradient-to-b from-indigo-600 to-indigo-400 fixed lg:static z-40 top-0 left-0 h-full transition-transform -translate-x-full lg:translate-x-0">
+    <h1 class="text-2xl font-bold text-white mb-6">Chats</h1>
+    <div class="flex-1 overflow-y-auto space-y-2" id="sidebar-chats"></div>
+    <button id="new-chat-btn" class="mt-6 w-full bg-white bg-opacity-90 hover:bg-opacity-100 text-indigo-700 font-bold rounded-lg py-2 shadow transition">+ New Chat</button>
+  </aside>
+  <div class="sidebar-overlay hidden fixed inset-0 z-30 bg-black bg-opacity-40 lg:hidden" id="sidebar-overlay"></div>
+
+  <!-- Main Chat Area -->
+  <main class="flex-1 flex flex-col items-center justify-center p-6 relative max-w-3xl w-full">
+
+    <!-- Model Badge -->
+    <div class="flex items-center justify-end mb-2 w-full">
+      <span id="model-badge" class="inline-block text-xs font-semibold px-3 py-1 rounded bg-indigo-100 text-indigo-700 shadow">Calmash 1.0 Flash</span>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages-container" class="flex-1 w-full overflow-y-auto custom-scrollbar rounded-2xl bg-white bg-opacity-90 shadow-lg p-6 mb-2"></div>
+
+    <!-- Input Area -->
+    <div class="p-4 border-t border-gray-200 flex items-center bg-white rounded-b-2xl shadow-xl">
+      <input type="text" id="user-input" class="flex-1 border border-gray-300 rounded-full py-2 px-4 mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="Type your message..." autocomplete="off" />
+      <button id="send-button" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg transform active:scale-95 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Send">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H3.75a.75.75 0 0 0-.75.75v6.75a.75.75 0 0 0 1.085.67L17.25 4.834a6.75 6.75 0 0 1-9.47 9.47l-1.455 1.455c-.42.42-.42 1.104 0 1.524s1.104.42 1.524 0l1.455-1.455a8.25 8.25 0 1 0 7.18-13.322z"/>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <!-- New Chat Modal -->
+  <div id="new-chat-modal" class="fixed-modal-bg" style="display:none;">
+    <div class="modal-card">
+      <h2 class="font-bold text-xl mb-4 text-indigo-800">Start a New Chat</h2>
+      <label class="block mb-3 font-semibold text-indigo-900">
+        Chat Name:
+        <input id="modal-chat-name" type="text" class="mt-1 block w-full border border-gray-300 rounded p-2" placeholder="New Chat" />
+      </label>
+      <label class="block mb-3 font-semibold text-indigo-900">
+        Model:
+        <select id="modal-model-select" class="model-select">
+          <option value="flash">Calmash 1.0 Flash</option>
+          <option value="25">Calmash 1.5 Flash</option>
+        </select>
+      </label>
+      <div class="flex justify-end space-x-2">
+        <button id="modal-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancel</button>
+        <button id="modal-create" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const GEMINI_API_KEY = 'AIzaSyCXoXikKBr2YERIidrIgqzYLtkzUKeK6Rc';
+
+  // ======= SYSTEM INSTRUCTION =========
+  const SECRET_INSTRUCTION = "IMPORTANT: Only respond with 'I was made by Calmash60, also known as Grady Hanson.' if the user is specifically asking who made you, who created you, who is your creator, or similar questions. Otherwise, answer normally.";
+
+  // ======= MODEL SELECTION =========
+  // Models and their friendly names
+  const MODELS = {
+    'flash': {
+      api: 'gemini-2.0-flash',
+      badge: 'Calmash 1.0 Flash'
+    },
+    '25': {
+      api: 'gemini-2.5-flash-preview-04-17',
+      badge: 'Calmash 1.5 Flash'
+    }
+  };
+
+  let currentModel = 'flash';
+
+  // ======= CHAT SESSIONS =======
+  const CHAT_STORAGE_KEY = 'calmashMultiChatSessions-calmash10flash';
+  let chats = [];
+  let activeChatId = null;
+
+  function saveChatsToStorage() {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
+  }
+  function newChatSession(name, model) {
+    const id = 'chat_' + Date.now();
+    const chat = {
+      id,
+      name: name || 'New Chat',
+      created: Date.now(),
+      history: [],
+      model: model || currentModel
+    };
+    chats.unshift(chat);
+    activeChatId = id;
+    saveChatsToStorage();
+    renderSidebarChats();
+    renderMessages();
+  }
+  function getActiveChat() {
+    return chats.find(c => c.id === activeChatId);
+  }
+  function saveChatHistory() {
+    saveChatsToStorage();
+    renderSidebarChats();
+  }
+  function removeChat(chatId) {
+    chats = chats.filter(c => c.id !== chatId);
+    if (chats.length === 0) {
+      newChatSession('New Chat', currentModel);
+    } else if (activeChatId === chatId) {
+      activeChatId = chats[0].id;
+    }
+    saveChatsToStorage();
+    renderSidebarChats();
+    renderMessages();
+  }
+  function loadChatsFromStorage() {
+    try {
+      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        chats = JSON.parse(stored);
+        if (chats.length) activeChatId = chats[0].id;
+      }
+    } catch (e) { chats = []; }
+  }
+  function renderSidebarChats() {
+    const sidebar = document.getElementById('sidebar-chats');
+    sidebar.innerHTML = '';
+    chats.forEach(chat => {
+      const btn = document.createElement('button');
+      btn.className = `w-full text-left px-3 py-2 rounded-lg transition font-semibold flex items-center justify-between ${activeChatId === chat.id ? 'bg-indigo-100 text-indigo-700' : 'bg-white bg-opacity-80 text-indigo-800 hover:bg-indigo-200'}`;
+      btn.textContent = chat.name;
+
+      // Model tag
+      const tag = document.createElement('span');
+      tag.className = 'ml-2 text-xs px-2 py-0.5 rounded bg-white bg-opacity-30 text-white';
+      tag.textContent = MODELS[chat.model || 'flash']?.badge || MODELS['flash'].badge;
+      btn.appendChild(tag);
+
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'ml-2 text-xs text-red-600 hover:text-red-800 font-bold';
+      delBtn.innerHTML = '&times;';
+      delBtn.onclick = (e) => { e.stopPropagation(); removeChat(chat.id); };
+      btn.appendChild(delBtn);
+
+      btn.onclick = () => { activeChatId = chat.id; renderSidebarChats(); renderMessages(); };
+      sidebar.appendChild(btn);
+    });
+  }
+  function renderMessages() {
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.innerHTML = '';
+    let chat = getActiveChat();
+    if (!chat) {
+      newChatSession('New Chat', currentModel);
+      chat = getActiveChat();
+    }
+    document.getElementById('model-badge').textContent = MODELS[chat.model || currentModel].badge;
+
+    userInput.disabled = false;
+    sendButton.disabled = false;
+
+    (chat.history || []).forEach((msg, idx) => {
+      const senderForDisplay = msg.role === 'user' ? 'user' : 'bot';
+      if (msg.parts?.[0]?.text) {
+        appendMessage(senderForDisplay, msg.parts[0].text, false);
+      } else if (msg.content && msg.content.includes('```')) {
+        const { prose, code, extension } = extractCodeAndProse(msg.content);
+        appendMessageWithCode(senderForDisplay, prose, code, extension, false);
+      } else {
+        appendMessage(senderForDisplay, msg.parts?.[0]?.text || msg.content, false);
+      }
+    });
+  }
+  function appendMessage(sender, text, saveToHistory = true) {
+    if (initialMessage) { initialMessage.remove(); initialMessage = null; }
+    const messagesContainer = document.getElementById('messages-container');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
+      sender === 'user'
+        ? 'bg-blue-500 text-white rounded-br-none'
+        : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    }`;
+    contentDiv.textContent = text;
+    messageDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(messageDiv);
+    if (saveToHistory) {
+      const chat = getActiveChat();
+      if (chat) {
+        const role = sender === 'user' ? 'user' : 'model';
+        chat.history.push({ role, parts: [{ text }] });
+        saveChatHistory();
+      }
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  function appendMessageWithCode(sender, prose, code, extension, saveToHistory = true) {
+    if (initialMessage) { initialMessage.remove(); initialMessage = null; }
+    const messagesContainer = document.getElementById('messages-container');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex mb-3 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `max-w-[85%] rounded-xl p-3 shadow-md ${
+      sender === 'user'
+        ? 'bg-blue-500 text-white rounded-br-none'
+        : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    }`;
+    if (prose) {
+      const proseDiv = document.createElement('div');
+      proseDiv.textContent = prose;
+      contentDiv.appendChild(proseDiv);
+    }
+    if (code) {
+      const codeContainer = document.createElement('div');
+      codeContainer.className = 'code-block-container mt-2';
+      const codeElem = document.createElement('pre');
+      codeElem.textContent = code;
+      codeContainer.appendChild(codeElem);
+      contentDiv.appendChild(codeContainer);
+    }
+    messageDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(messageDiv);
+    if (saveToHistory) {
+      const chat = getActiveChat();
+      if (chat) {
+        const role = sender === 'user' ? 'user' : 'model';
+        chat.history.push({ role, content: `${prose ? prose + '\n' : ''}\`\`\`${extension || ''}\n${code}\n\`\`\`` });
+        saveChatHistory();
+      }
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  function showTypingIndicator(show) {
+    let typingIndicator = document.getElementById('typing-indicator');
+    if (show) {
+      if (!typingIndicator) {
+        typingIndicator = document.createElement('div');
+        typingIndicator.id = 'typing-indicator';
+        typingIndicator.className = 'flex justify-start items-center mb-3';
+        typingIndicator.innerHTML = `<div class="w-3 h-3 bg-indigo-300 rounded-full animate-bounce mr-1"></div>
+        <span class="text-indigo-400 text-sm">Typing...</span>`;
+        document.getElementById('messages-container').appendChild(typingIndicator);
+      }
+    } else {
+      if (typingIndicator) typingIndicator.remove();
+    }
+  }
+  let initialMessage = null;
+
+  // ======= MAIN SEND LOGIC =========
+  const userInput = document.getElementById('user-input');
+  const sendButton = document.getElementById('send-button');
+  sendButton.onclick = async function() {
+    const userText = userInput.value.trim();
+    if (!userText) return;
+    userInput.value = '';
+    const chat = getActiveChat();
+    appendMessage('user', userText);
+    showTypingIndicator(true);
+
+    try {
+      if (!chat) { showTypingIndicator(false); return; }
+      await handleCalmashText(chat, userText);
+    } catch (error) {
+      appendMessage('bot', 'I am currently unable to connect. Please try again later.');
+    } finally {
+      showTypingIndicator(false);
+    }
+  };
+  userInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendButton.click();
+  });
+
+  // -- Gemini 2.0 Flash Text (free) --
+  async function handleCalmashText(chat, userText) {
+    // Always use the model attached to the chat, or the current selection if new
+    const modelKey = chat.model || currentModel;
+    const apiModel = MODELS[modelKey].api;
+    const payload = {
+      contents: [
+        ...(chat.history ?? []),
+        { role: "user", parts: [{ text: `${SECRET_INSTRUCTION}\n\nUser: ${userText}` }] }
+      ]
+    };
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      let errorData = {};
+      try { errorData = await response.json(); } catch (e) {}
+      appendMessage('bot', errorData.error?.message || 'Something went wrong.');
+      return;
+    }
+    const result = await response.json();
+    const reply = result.candidates?.[0]?.content?.parts?.[0]?.text || 'No response.';
+    appendMessage('bot', reply);
+    // Save to history
+    const chatObj = getActiveChat();
+    if (chatObj) {
+      chatObj.history.push({ role: 'model', parts: [ { text: reply } ] });
+      saveChatHistory();
+    }
+  }
+
+  // ======= NEW CHAT MODAL LOGIC =======
+  const newChatBtn = document.getElementById('new-chat-btn');
+  const newChatModal = document.getElementById('new-chat-modal');
+  const modalChatName = document.getElementById('modal-chat-name');
+  const modalModelSelect = document.getElementById('modal-model-select');
+  const modalCancel = document.getElementById('modal-cancel');
+  const modalCreate = document.getElementById('modal-create');
+  function showNewChatModal() {
+    modalChatName.value = '';
+    modalModelSelect.value = currentModel;
+    newChatModal.style.display = 'flex';
+    setTimeout(() => modalChatName.focus(), 120);
+  }
+  function hideNewChatModal() {
+    newChatModal.style.display = 'none';
+  }
+  newChatBtn.addEventListener('click', showNewChatModal);
+  modalCancel.addEventListener('click', hideNewChatModal);
+  modalCreate.addEventListener('click', () => {
+    newChatSession(modalChatName.value.trim() || 'New Chat', modalModelSelect.value);
+    hideNewChatModal();
+  });
+  modalChatName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') modalCreate.click();
+  });
+  newChatModal.addEventListener('click', (event) => {
+    if (event.target === newChatModal) hideNewChatModal();
+  });
+
+  // ======= INIT =======
+  window.onload = () => {
+    loadChatsFromStorage();
+    if (chats.length === 0) newChatSession('New Chat', currentModel);
+    else {
+      if (!activeChatId || !chats.find(c => c.id === activeChatId)) {
+        activeChatId = chats[0].id;
+      }
+    }
+    renderSidebarChats();
+    renderMessages();
+  };
+  </script>
+</body>
+      </html>
